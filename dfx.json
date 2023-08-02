@@ -1,0 +1,29 @@
+{
+  "canisters": {
+    "icpsig_backend": {
+      "main": "src/icpsig_backend/main.mo",
+      "type": "motoko"
+    },
+    "icpsig_frontend": {
+      "dependencies": [
+        "icpsig_backend"
+      ],
+      "frontend": {
+        "entrypoint": "src/icpsig_frontend/src/index.html"
+      },
+      "source": [
+        "src/icpsig_frontend/assets",
+        "dist/icpsig_frontend/"
+      ],
+      "type": "assets"
+    }
+  },
+  "defaults": {
+    "build": {
+      "args": "",
+      "packtool": ""
+    }
+  },
+  "output_env_file": ".env",
+  "version": 1
+}
