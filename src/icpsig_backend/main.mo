@@ -10,6 +10,7 @@ import Result "mo:base/Result";
 import Text "mo:base/Text";
 import Time "mo:base/Time";
 import Trie "mo:base/Trie";
+import Nat "mo:base/Nat";
 import XorShift "mo:rand/XorShift";
 import Source "mo:ulid/Source";
 import ULID "mo:ulid/ULID";
@@ -27,6 +28,18 @@ shared ({ caller = installer_ }) actor class Multisig() = this {
     threshold : Nat64.Nat64;
     created_at : Int;
   };
+
+  public type Transaction = {
+    id : Text;
+    from_vault : Text;
+    to : Text;
+    threshold: Nat64.Nat64;
+    approvals : List.List<Principal>;
+    amount : Types.Tokens;
+    created_at : Int;
+  };
+
+  var transactions : List.List<Transaction> = List.nil<Transaction>();
 
   var vaults_map : HashMap.HashMap<Text, Vault> = HashMap.HashMap(10, Text.equal, Text.hash);
 
@@ -94,7 +107,7 @@ shared ({ caller = installer_ }) actor class Multisig() = this {
           case null {
             throw Error.reject("Vault does not belong to caller");
           };
-          case (?token) {
+          case (?s) {
             let transferArgs : Types.TransferArgs = {
               memo = Nat64.fromNat(0);
               from_subaccount = null;
@@ -111,17 +124,178 @@ shared ({ caller = installer_ }) actor class Multisig() = this {
         };
       };
     };
-  }
-
+  };
 
   // add signatory
+  public shared ({ caller }) func add_signatory(
+    vault : Text,
+    signatory : Principal,
+    threshold : Nat64.Nat64
+  ) : async Bool {
+    let from_vault = vaults_map.get(vault);
+
+    switch (from_vault) {
+      case null { throw Error.reject("Vault does not exist"); };
+      case (?vault_obj) {
+        let signers = vault_obj.signers;
+        let signer = List.find(signers, func(s: Principal) : Bool { s == caller });
+
+        switch (signer) {
+          case null {
+            throw Error.reject("Vault does not belong to caller");
+          };
+          case (?s) {
+            let newSigners = List.push(signatory, signers);
+
+            let newVault : Vault = {
+              signers = newSigners;
+              threshold = threshold;
+              created_at = vault_obj.created_at;
+            };
+
+            vaults_map.put(vault, newVault);
+
+            return true;
+          };
+        };
+      };
+    };
+  };
 
   // remove signatory
+  public shared ({ caller }) func remove_signatory(
+    vault : Text,
+    signatory : Principal,
+    threshold : Nat64.Nat64
+  ) : async Bool {
+    let from_vault = vaults_map.get(vault);
 
-  // create transaction
+    switch (from_vault) {
+      case null { throw Error.reject("Vault does not exist"); };
+      case (?vault_obj) {
+        let signers = vault_obj.signers;
+        let signer = List.find(signers, func(s: Principal) : Bool { s == caller });
+
+        switch (signer) {
+          case null {
+            throw Error.reject("Vault does not belong to caller");
+          };
+          case (?s) {
+            let newSigners = List.filter(signers, func(s: Principal) : Bool { s != signatory });
+
+            let newVault : Vault = {
+              signers = newSigners;
+              threshold = threshold;
+              created_at = vault_obj.created_at;
+            };
+
+            vaults_map.put(vault, newVault);
+
+            return true;
+          };
+        };
+      };
+    };
+  };
 
   // approve transaction
+  public shared ({ caller }) func approve_transaction(
+    id: Nat64.Nat64,
+    vault : Text,
+    transaction : Text
+  ) : async Bool {
+    let from_vault = vaults_map.get(vault);
 
-  //reject transaction
+    switch (from_vault) {
+      case null { throw Error.reject("Vault does not exist"); };
+      case (?vault_obj) {
+        let signers = vault_obj.signers;
+        let signer = List.find(signers, func(s: Principal) : Bool { s == caller });
+
+        switch (signer) {
+          case null {
+            throw Error.reject("Vault does not belong to caller");
+          };
+          case (?s) {
+            let transaction_obj = transactions.find(func(t: Transaction) : Bool { t.id == transaction });
+
+            switch (transaction_obj) {
+              case null { throw Error.reject("Transaction does not exist"); };
+              case (?transaction_obj) {
+                let approvals = transaction_obj.approvals;
+                let newApprovals = List.push(caller, approvals);
+
+                let newTransaction : Transaction = {
+                  id = transaction_obj.id;
+                  from_vault = transaction_obj.from_vault;
+                  to = transaction_obj.to;
+                  threshold = transaction_obj.threshold;
+                  approvals = newApprovals;
+                  amount = transaction_obj.amount;
+                  created_at = transaction_obj.created_at;
+                };
+
+                transactions_map.put(transaction, newTransaction);
+
+                return true;
+              };
+            };
+
+            return true;
+          };
+        };
+      };
+    };
+  };
+
+  // reject transaction
+  public shared ({ caller }) func reject_transaction(
+    id: Nat64.Nat64,
+    vault : Text,
+    transaction : Text
+  ) : async Bool {
+    let from_vault = vaults_map.get(vault);
+
+    switch (from_vault) {
+      case null { throw Error.reject("Vault does not exist"); };
+      case (?vault_obj) {
+        let signers = vault_obj.signers;
+        let signer = List.find(signers, func(s: Principal) : Bool { s == caller });
+
+        switch (signer) {
+          case null {
+            throw Error.reject("Vault does not belong to caller");
+          };
+          case (?s) {
+            let transaction_obj = transactions.find(func(t: Transaction) : Bool { t.id == transaction });
+
+            switch (transaction_obj) {
+              case null { throw Error.reject("Transaction does not exist"); };
+              case (?transaction_obj) {
+                let approvals = transaction_obj.approvals;
+                let newApprovals = List.filter(approvals, func(a: Principal) : Bool { a != caller });
+
+                let newTransaction : Transaction = {
+                  id = transaction_obj.id;
+                  from_vault = transaction_obj.from_vault;
+                  to = transaction_obj.to;
+                  threshold = transaction_obj.threshold;
+                  approvals = newApprovals;
+                  amount = transaction_obj.amount;
+                  created_at = transaction_obj.created_at;
+                };
+
+                transactions_map.put(transaction, newTransaction);
+
+                return true;
+              };
+            };
+
+            return true;
+          };
+        };
+      };
+    };
+  };
 
 };
