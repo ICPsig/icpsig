@@ -1,5 +1,11 @@
 {
   "canisters": {
+    "ledger": {
+      "type": "custom",
+      "wasm": "src/icpsig_backend/ledger/ledger.wasm",
+      "candid": "src/icpsig_backend/ledger/ledger.public.did",
+      "build": ""
+    },
     "icpsig_backend": {
       "main": "src/icpsig_backend/main.mo",
       "type": "motoko"
@@ -21,7 +27,7 @@
   "defaults": {
     "build": {
       "args": "",
-      "packtool": ""
+      "packtool": "vessel sources"
     }
   },
   "output_env_file": ".env",
