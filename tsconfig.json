@@ -1,0 +1,28 @@
+{
+  "compilerOptions": {
+    "baseUrl": "./src/icpsig_frontend",
+    "declaration": true,
+    "downlevelIteration": true,
+    "target": "es5" /* Specify ECMAScript target version: 'ES3' (default), 'ES5', 'ES2015', 'ES2016', 'ES2017', 'ES2018', 'ES2019' or 'ESNEXT'. */,
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ] /* Specify library files to be included in the compilation. */,
+    "allowJs": true /* Allow javascript files to be compiled. */,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "noFallthroughCasesInSwitch": true,
+    "module": "esnext",
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react" /* Specify JSX code generation: 'preserve', 'react-native', or 'react'. */,
+    "useUnknownInCatchVariables": false
+  },
+  "include": ["**/*.ts", "**/*.tsx"]
+}
