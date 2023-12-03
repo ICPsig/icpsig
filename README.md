@@ -8,6 +8,9 @@ ICPSig endeavors to address this critical need by offering organizations a compr
 
 ICPsig is live at https://wrv7o-yaaaa-aaaag-aceqa-cai.raw.icp0.io/
 
+![icpsig_screenshot](https://github.com/ICPsig/icpsig/assets/874046/98ec8f24-a46e-4eb6-b666-a326f06c50f6)
+
+
 ## Running the project locally
 
 To run project locally, you can use the following commands:
