@@ -1,0 +1,52 @@
+/* Footer Container */
+footer {
+  background-color: #ffffff; /* Replace with the actual color from Tailwind */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Replace with the actual shadow values from Tailwind */
+  border-radius: 0.375rem; /* Replace with the actual border radius from Tailwind */
+  padding: 1rem; /* Replace with the actual spacing from Tailwind */
+  display: flex;
+  justify-content: space-between;
+}
+
+/* Footer Links List */
+ul {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem; /* Replace with the actual margin from Tailwind */
+}
+
+/* Footer Link Item */
+ul li {
+  margin-right: 1rem; /* Replace with the actual margin from Tailwind */
+}
+
+/* Footer Link */
+a {
+  font-size: 0.875rem; /* Replace with the actual font size from Tailwind */
+  font-weight: normal; /* Replace with the actual font weight from Tailwind */
+  color: #718096; /* Replace with the actual color from Tailwind */
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+/* Social Icons Container */
+div {
+  display: flex;
+  justify-content: center;
+  gap: 1rem; /* Replace with the actual gap from Tailwind */
+}
+
+/* Social Icon */
+svg {
+  fill: #718096; /* Replace with the actual color from Tailwind */
+  width: 1.25rem; /* Replace with the actual width from Tailwind */
+  height: 1.25rem; /* Replace with the actual height from Tailwind */
+}
+
+svg:hover {
+  fill: #2d3748; /* Replace with the actual hover color from Tailwind */
+}

@@ -1,38 +1,33 @@
-// Copyright 2022-2023 @Polkasafe/polkaSafe-ui authors & contributors
-// This software may be modified and distributed under the terms
-// of the Apache-2.0 license. See the LICENSE file for details.
-// Copyright 2022-2023 @Polkasafe/polkaSafe-ui authors & contributors
-// This software may be modified and distributed under the terms
-// of the Apache-2.0 license. See the LICENSE file for details.
-
-import { ConfigProvider } from 'antd';
-import React from 'react';
-import { BrowserRouter } from 'react-router-dom';
-import AppLayout from './components/AppLayout';
-import { ActiveMultisigProvider } from './context/ActiveMultisigContext';
-import { IdentityContextProvider } from './context/IdentityProviderContext';
-import ModalContextProvider from './context/ModalContext';
-import { UserDetailsProvider } from './context/UserDetailsContext';
-import { antdTheme } from './themes/antdTheme';
-import { GlobalStyle } from './ui-components/GlobalStyle';
+import React from "react";
+import { createClient } from "@connect2ic/core";
+import { defaultProviders } from "@connect2ic/core/providers";
+import { ConnectDialog, Connect2ICProvider } from "@connect2ic/react";
+import Profile from "./components/Profile";
+import Login from "./components/Login";
+import { UserDetailsProvider } from "./components/Context/UserContext";
+import Layout from "./components/Layout";
+// import "@connect2ic/core/style.css";
 
 function App() {
-	return (
-		<BrowserRouter>
-			<ConfigProvider theme={antdTheme}>
-				<IdentityContextProvider>
-					<UserDetailsProvider>
-						<ActiveMultisigProvider>
-							<GlobalStyle />
-							<ModalContextProvider>
-								<AppLayout />
-							</ModalContextProvider>
-						</ActiveMultisigProvider>
-					</UserDetailsProvider>
-				</IdentityContextProvider>
-			</ConfigProvider>
-		</BrowserRouter>
-	);
+  return (
+    <UserDetailsProvider>
+      <Layout>
+        <>
+          <Login />
+          <Profile />
+        </>
+      </Layout>
+    </UserDetailsProvider>
+  );
 }
 
-export default App;
+const client = createClient({
+  // @ts-ignore
+  providers: defaultProviders,
+});
+
+export default () => (
+  <Connect2ICProvider client={client}>
+    <App />
+  </Connect2ICProvider>
+);

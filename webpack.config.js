@@ -49,6 +49,7 @@ module.exports = {
           },
         },
       },
+      { test: /\.css$/, use: ["style-loader", "css-loader", "postcss-loader"] },
     ],
   },
   // Depending in the language or framework you are using for
