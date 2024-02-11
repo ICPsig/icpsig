@@ -1,0 +1,40 @@
+type Transaction = 
+ record {
+   amount: nat;
+   approvals: List;
+   completed: bool;
+   created_at: int;
+   from_vault: text;
+   id: text;
+   threshold: nat;
+   to: text;
+   transaction_owner: principal;
+ };
+type Tokens = record {e8s: nat64;};
+type Multisig = 
+ service {
+   add_address_to_address_book: (text, principal) -> (List);
+   add_signatory: (text, principal, nat) -> (bool);
+   approve_transaction: (text, text, principal) -> (bool);
+   cancel_transaction: (principal, text, text) -> (bool);
+   create_transactions: (text, text, text, nat) -> (bool);
+   create_vault: (List_1, nat, text) -> (text);
+   getCanisterPrincipal: () -> (principal);
+   get_address_book: (principal) -> (List) query;
+   get_all_vault_by_principle: (text) -> (vec text) query;
+   get_multisig_balance: (text) -> (Tokens);
+   get_transactions: (principal, text) -> (vec Transaction) query;
+   greet: (text) -> (text) query;
+   remove_signatory: (text, principal, nat) -> (bool);
+ };
+type List_1 = 
+ opt record {
+       text;
+       List_1;
+     };
+type List = 
+ opt record {
+       principal;
+       List;
+     };
+service : () -> Multisig
