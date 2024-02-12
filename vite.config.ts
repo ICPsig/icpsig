@@ -3,6 +3,7 @@ import reactRefresh from "@vitejs/plugin-react-refresh"
 import path from "path"
 import dfxJson from "./dfx.json"
 import fs from "fs"
+import tsconfigPaths from "vite-tsconfig-paths"
 
 const isDev = process.env["DFX_NETWORK"] !== "ic"
 
@@ -22,7 +23,7 @@ try {
       .toString(),
   )
 } catch (e) {
-    console.error("\n⚠️  Before starting the dev server run: dfx deploy\n\n")
+  console.error("\n⚠️  Before starting the dev server run: dfx deploy\n\n")
 }
 
 // List of all aliases for canisters
@@ -65,7 +66,7 @@ const DFX_PORT = dfxJson.networks.local.bind.split(":")[1]
 // See guide on how to configure Vite at:
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [reactRefresh()],
+  plugins: [reactRefresh(), tsconfigPaths()],
   resolve: {
     alias: {
       // Here we tell Vite the "fake" modules that we want to define

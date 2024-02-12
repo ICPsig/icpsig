@@ -1,70 +1,39 @@
-import React, { useState } from "react"
-/*
- * Connect2ic provides essential utilities for IC app development
- */
-import { createClient } from "@connect2ic/core"
-import { defaultProviders } from "@connect2ic/core/providers"
-import { ConnectDialog, Connect2ICProvider, useWallet } from "@connect2ic/react"
-import "@connect2ic/core/style.css"
-/*
- * Import canister definitions like this:
- */
-/*
- * Some examples to get you started
+// Copyright 2022-2023 @Polkasafe/polkaSafe-ui authors & contributors
+// This software may be modified and distributed under the terms
+// of the Apache-2.0 license. See the LICENSE file for details.
+// Copyright 2022-2023 @Polkasafe/polkaSafe-ui authors & contributors
+// This software may be modified and distributed under the terms
+// of the Apache-2.0 license. See the LICENSE file for details.
 
- */
-import * as icp_vault from "../.dfx/local/canisters/icp_vault"
-import ConnectWallet from "./components/ConnectWallet"
-import Multisig from "./components/Multisig"
-import CreateMultisig from "./components/CreateMultisig"
-import AddressBook from "./components/AddressBook"
-import Transactions from "./components/Transactions"
-import SendMoney from "./components/SendMoney"
+import { ConfigProvider } from "antd"
+import React from "react"
+import { BrowserRouter } from "react-router-dom"
+import AppLayout from "@frontend/components/AppLayout"
 
-const initState = {
-  vaults: null,
-  trnsactions: null,
-  addressBook: null,
-  assets: null,
-}
+import { IdentityContextProvider } from "@frontend/context/IdentityProviderContext"
+import ModalContextProvider from "@frontend/context/ModalContext"
+import { UserDetailsProvider } from "@frontend/context/UserDetailsContext"
+import { antdTheme } from "@frontend/themes/antdTheme"
+import { GlobalStyle } from "@frontend/ui-components/GlobalStyle"
+import { ActiveMultisigProvider } from "@frontend/context/ActiveMultisigContext"
 
 function App() {
-  const [wallet] = useWallet()
-  const [userDetails, setUserDetails] = useState(initState)
-  console.log(wallet)
   return (
-    <div className="App">
-        <>
-            
-            <div className="examples">
-              <Multisig userDetails={userDetails} setUserDetails={setUserDetails}/>
-              <CreateMultisig />
-              <AddressBook />
-              <Transactions />
-              <SendMoney />
-            <>
-            <ConnectWallet/>
-            <ConnectDialog />
-            </>
-            </div>
-            
-        </>
-    </div>
+    <BrowserRouter>
+      <ConfigProvider theme={antdTheme}>
+        <IdentityContextProvider>
+          <UserDetailsProvider>
+            <ActiveMultisigProvider>
+              <GlobalStyle />
+              <ModalContextProvider>
+                <AppLayout />
+              </ModalContextProvider>
+            </ActiveMultisigProvider>
+          </UserDetailsProvider>
+        </IdentityContextProvider>
+      </ConfigProvider>
+    </BrowserRouter>
   )
 }
 
-const client = createClient({
-  canisters:{
-    icp_vault
-  },
-  providers: defaultProviders,
-  globalProviderConfig: {
-    dev: import.meta.env.DEV,
-  },
-})
-
-export default () => (
-  <Connect2ICProvider client={client}>
-    <App />
-  </Connect2ICProvider>
-)
+export default App
