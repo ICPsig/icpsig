@@ -13,25 +13,20 @@ type Transaction =
 type Tokens = record {e8s: nat64;};
 type Multisig = 
  service {
-   add_address_to_address_book: (text, principal) -> (List);
-   add_signatory: (text, principal, nat) -> (bool);
-   approve_transaction: (text, text, principal) -> (bool);
-   cancel_transaction: (principal, text, text) -> (bool);
+   add_address_to_address_book: (text, text) -> (vec principal);
+   add_signatory: (text, text, nat) -> (bool);
+   approve_transaction: (text, text, text) -> (bool);
+   cancel_transaction: (text, text, text) -> (bool);
    create_transactions: (text, text, text, nat) -> (bool);
-   create_vault: (List_1, nat, text) -> (text);
+   create_vault: (vec text, nat, text) -> (text);
    getCanisterPrincipal: () -> (principal);
-   get_address_book: (principal) -> (List) query;
+   get_address_book: (text) -> (vec principal) query;
    get_all_vault_by_principle: (text) -> (vec text) query;
    get_multisig_balance: (text) -> (Tokens);
-   get_transactions: (principal, text) -> (vec Transaction) query;
+   get_transactions: (text, text) -> (vec Transaction) query;
    greet: (text) -> (text) query;
    remove_signatory: (text, principal, nat) -> (bool);
  };
-type List_1 = 
- opt record {
-       text;
-       List_1;
-     };
 type List = 
  opt record {
        principal;

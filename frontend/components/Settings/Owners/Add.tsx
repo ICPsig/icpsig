@@ -2,50 +2,50 @@
 // This software may be modified and distributed under the terms
 // of the Apache-2.0 license. See the LICENSE file for details.
 // import { PlusCircleOutlined } from '@ant-design/icons';
-import { AutoComplete, Button, Form, Input, Spin, Tooltip } from "antd"
-import React, { useState } from "react"
-import AddMultisigSVG from "@frontend/assets/add-multisig.svg"
-import FailedTransactionLottie from "@frontend/ui-components/lottie-graphics/FailedTransaction"
-import LoadingLottie from "@frontend/ui-components/lottie-graphics/Loading"
-import RemoveMultisigSVG from "@frontend/assets/remove-multisig.svg"
-import CancelBtn from "@frontend/components/Settings/CancelBtn"
-import AddBtn from "@frontend/components/Settings/ModalBtn"
-import Loader from "@frontend/components/UserFlow/Loader"
-import { useGlobalUserDetailsContext } from "@frontend/context/UserDetailsContext"
-import { NotificationStatus } from "@frontend/types"
-import { WarningCircleIcon } from "@frontend/ui-components/CustomIcons"
-import queueNotification from "@frontend/ui-components/QueueNotification"
-import { addNewTransaction } from "@frontend/utils/addNewTransaction"
-import styled from "styled-components"
+import { AutoComplete, Button, Form, Input, Spin, Tooltip } from "antd";
+import React, { useState } from "react";
+import AddMultisigSVG from "@frontend/assets/add-multisig.svg";
+import FailedTransactionLottie from "@frontend/ui-components/lottie-graphics/FailedTransaction";
+import LoadingLottie from "@frontend/ui-components/lottie-graphics/Loading";
+import RemoveMultisigSVG from "@frontend/assets/remove-multisig.svg";
+import CancelBtn from "@frontend/components/Settings/CancelBtn";
+import AddBtn from "@frontend/components/Settings/ModalBtn";
+import Loader from "@frontend/components/UserFlow/Loader";
+import { useGlobalUserDetailsContext } from "@frontend/context/UserDetailsContext";
+import { NotificationStatus } from "@frontend/types";
+import { WarningCircleIcon } from "@frontend/ui-components/CustomIcons";
+import queueNotification from "@frontend/ui-components/QueueNotification";
+import { addNewTransaction } from "@frontend/utils/addNewTransaction";
+import styled from "styled-components";
 
 interface ISignatory {
-  name: string
-  address: string
+  name: string;
+  address: string;
 }
 
 const addRecipientHeading = () => {
-  const elm = document.getElementById("recipient_list")
+  const elm = document.getElementById("recipient_list");
   if (elm) {
-    const parentElm = elm.parentElement
+    const parentElm = elm.parentElement;
     if (parentElm) {
-      const isElmPresent = document.getElementById("recipient_heading")
+      const isElmPresent = document.getElementById("recipient_heading");
       if (!isElmPresent) {
-        const recipientHeading = document.createElement("p")
-        recipientHeading.textContent = "Recent Addresses"
-        recipientHeading.id = "recipient_heading"
-        recipientHeading.classList.add("recipient_heading")
-        parentElm.insertBefore(recipientHeading, parentElm.firstChild!)
+        const recipientHeading = document.createElement("p");
+        recipientHeading.textContent = "Recent Addresses";
+        recipientHeading.id = "recipient_heading";
+        recipientHeading.classList.add("recipient_heading");
+        parentElm.insertBefore(recipientHeading, parentElm.firstChild!);
       }
     }
   }
-}
+};
 
 const AddOwner = ({
   onCancel,
   className,
 }: {
-  onCancel?: () => void
-  className?: string
+  onCancel?: () => void;
+  className?: string;
 }) => {
   const {
     multisigAddresses,
@@ -53,89 +53,90 @@ const AddOwner = ({
     addressBook,
     address,
     identityBackend,
-  } = useGlobalUserDetailsContext()
+  } = useGlobalUserDetailsContext();
   const multisig = multisigAddresses.find(
     (item: any) =>
       item.address === activeMultisig || item.proxy === activeMultisig,
-  )
-  const [loading, setLoading] = useState(false)
-  const [success] = useState<boolean>(false)
-  const [failure] = useState<boolean>(false)
-  const [loadingMessages] = useState<string>("")
-  const [txnHash] = useState<string>("")
+  );
+  const [loading, setLoading] = useState(false);
+  const [success] = useState<boolean>(false);
+  const [failure] = useState<boolean>(false);
+  const [loadingMessages] = useState<string>("");
+  const [txnHash] = useState<string>("");
   const [newThreshold, setNewThreshold] = useState<number>(
     multisig?.threshold || 2,
-  )
+  );
 
   const [signatoriesArray, setSignatoriesArray] = useState<ISignatory[]>([
     { address: "", name: "" },
-  ])
+  ]);
 
   const onSignatoryChange = (value: any, i: number) => {
     setSignatoriesArray((prevState) => {
-      const copyArray = [...prevState]
-      const copyObject = { ...copyArray[i] }
-      copyObject.address = value
-      copyArray[i] = copyObject
-      return copyArray
-    })
-  }
+      const copyArray = [...prevState];
+      const copyObject = { ...copyArray[i] };
+      copyObject.address = value;
+      copyArray[i] = copyObject;
+      return copyArray;
+    });
+  };
   const onNameChange = (event: any, i: number) => {
     setSignatoriesArray((prevState) => {
-      const copyArray = [...prevState]
-      const copyObject = { ...copyArray[i] }
-      copyObject.name = event.target.value
-      copyArray[i] = copyObject
-      return copyArray
-    })
-  }
+      const copyArray = [...prevState];
+      const copyObject = { ...copyArray[i] };
+      copyObject.name = event.target.value;
+      copyArray[i] = copyObject;
+      return copyArray;
+    });
+  };
 
   const onRemoveSignatory = (i: number) => {
-    const copyOptionsArray = [...signatoriesArray]
-    copyOptionsArray.splice(i, 1)
-    setSignatoriesArray(copyOptionsArray)
-  }
+    const copyOptionsArray = [...signatoriesArray];
+    copyOptionsArray.splice(i, 1);
+    setSignatoriesArray(copyOptionsArray);
+  };
 
   const handleAddOwner = async () => {
     if (!identityBackend) {
-      return
+      return;
     }
-    setLoading(true)
+    setLoading(true);
     try {
       const safeTxHash = (
         await identityBackend.createAddOwnerTx(
           activeMultisig,
           signatoriesArray?.[0].address,
           newThreshold,
+          address,
         )
-      ).data
+      ).data;
       if (safeTxHash) {
-        onCancel?.()
-        setLoading(false)
+        onCancel?.();
+        setLoading(false);
         queueNotification({
           header: "Success",
           message: "New Transaction Created.",
           status: NotificationStatus.SUCCESS,
-        })
+        });
       } else {
-        setLoading(false)
+        setLoading(false);
         queueNotification({
           header: "Failed",
           message: "Something went wrong.",
           status: NotificationStatus.ERROR,
-        })
+        });
       }
     } catch (err) {
-      console.log(err)
-      onCancel?.()
-      setLoading(false)
+      console.log(err);
+      onCancel?.();
+      setLoading(false);
       queueNotification({
         header: "Error.",
         message: "Please try again.",
         status: NotificationStatus.ERROR,
-      })
+      });
     }
-  }
+  };
 
   return (
     <>
@@ -241,7 +242,7 @@ const AddOwner = ({
                     <Button
                       onClick={() => {
                         if (newThreshold !== 2) {
-                          setNewThreshold((prev) => prev - 1)
+                          setNewThreshold((prev) => prev - 1);
                         }
                       }}
                       className={`p-0 outline-none border rounded-full flex items-center justify-center ${
@@ -269,7 +270,7 @@ const AddOwner = ({
                           (multisig?.signatories.length || 0) +
                             signatoriesArray.length
                         ) {
-                          setNewThreshold((prev) => prev + 1)
+                          setNewThreshold((prev) => prev + 1);
                         }
                       }}
                       className={`p-0 outline-none border rounded-full flex items-center justify-center ${
@@ -314,8 +315,8 @@ const AddOwner = ({
         </Spin>
       )}
     </>
-  )
-}
+  );
+};
 
 export default styled(AddOwner)`
   .ant-select input {
@@ -349,4 +350,4 @@ export default styled(AddOwner)`
     display: flex !important;
     align-items: center !important;
   }
-`
+`;

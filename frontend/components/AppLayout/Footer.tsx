@@ -1,12 +1,12 @@
 // Copyright 2022-2023 @Polkasafe/polkaSafe-ui authors & contributors
 // This software may be modified and distributed under the terms
 // of the Apache-2.0 license. See the LICENSE file for details.
-import { Layout } from "antd"
+import { Layout } from "antd";
 // import { PolkadotIcon } from "@frontend/ui-components/CustomIcons"
-import React from "react"
-import { Link } from "react-router-dom"
+import React from "react";
+import { Link } from "react-router-dom";
 
-const { Footer: AntdFooter } = Layout
+const { Footer: AntdFooter } = Layout;
 
 const Footer = () => {
   return (
@@ -38,9 +38,7 @@ const Footer = () => {
         </div>
         <p className="flex items-center gap-x-2">
           {/* <PolkadotIcon className="text-sm" /> */}
-          <span className="text-sm">
-            Built By Grants From Polkadot Treasury
-          </span>
+          <span className="text-sm">Built By Grants From ICP Treasury</span>
         </p>
         <p className="md:hidden">
           <sup>&#169;</sup>
@@ -48,7 +46,7 @@ const Footer = () => {
         </p>
       </section>
     </AntdFooter>
-  )
-}
+  );
+};
 
-export default Footer
+export default Footer;

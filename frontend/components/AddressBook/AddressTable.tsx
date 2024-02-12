@@ -2,14 +2,14 @@
 // This software may be modified and distributed under the terms
 // of the Apache-2.0 license. See the LICENSE file for details.
 
-import { Badge, Dropdown, Modal, Table, Tooltip } from "antd"
-import type { ColumnsType } from "antd/es/table"
-import React, { FC, useState } from "react"
-import { useActiveMultisigContext } from "@frontend/context/ActiveMultisigContext"
-import { useModalContext } from "@frontend/context/ModalContext"
-import { useGlobalUserDetailsContext } from "@frontend/context/UserDetailsContext"
-import { DEFAULT_ADDRESS_NAME } from "@frontend/global/default"
-import { IAllAddresses } from "@frontend/types"
+import { Badge, Dropdown, Modal, Table, Tooltip } from "antd";
+import type { ColumnsType } from "antd/es/table";
+import React, { FC, useState } from "react";
+import { useActiveMultisigContext } from "@frontend/context/ActiveMultisigContext";
+import { useModalContext } from "@frontend/context/ModalContext";
+import { useGlobalUserDetailsContext } from "@frontend/context/UserDetailsContext";
+import { DEFAULT_ADDRESS_NAME } from "@frontend/global/default";
+import { IAllAddresses } from "@frontend/types";
 import {
   AddIcon,
   CopyIcon,
@@ -18,36 +18,36 @@ import {
   ExternalLinkIcon,
   OutlineCloseIcon,
   SharedIcon,
-} from "@frontend/ui-components/CustomIcons"
-import PrimaryButton from "@frontend/ui-components/PrimaryButton"
-import copyText from "@frontend/utils/copyText"
-import shortenAddress from "@frontend/utils/shortenAddress"
-import styled from "styled-components"
+} from "@frontend/ui-components/CustomIcons";
+import PrimaryButton from "@frontend/ui-components/PrimaryButton";
+import copyText from "@frontend/utils/copyText";
+import shortenAddress from "@frontend/utils/shortenAddress";
+import styled from "styled-components";
 
-import SendFundsForm from "../SendFunds/SendFundsForm"
-import EditAddress from "./Edit"
-import RemoveAddress from "./Remove"
-import Avatar from "../Avatar/Avatar"
+import SendFundsForm from "../SendFunds/SendFundsForm";
+import EditAddress from "./Edit";
+import RemoveAddress from "./Remove";
+import Avatar from "../Avatar/Avatar";
 
 export interface IAddress {
-  name: string
-  address: string
+  name: string;
+  address: string;
 }
 interface IAddressProps {
-  addresses: IAllAddresses
-  className?: string
+  addresses: IAllAddresses;
+  className?: string;
 }
 
 const TransactionModal = ({
   className,
   defaultAddress,
 }: {
-  className?: string
-  defaultAddress: string
+  className?: string;
+  defaultAddress: string;
 }) => {
   const [openTransactionModal, setOpenTransactionModal] =
-    useState<boolean>(false)
-  const { activeMultisig } = useGlobalUserDetailsContext()
+    useState<boolean>(false);
+  const { activeMultisig } = useGlobalUserDetailsContext();
   return (
     <>
       <PrimaryButton
@@ -82,8 +82,8 @@ const TransactionModal = ({
         />
       </Modal>
     </>
-  )
-}
+  );
+};
 
 const EditAddressModal = ({
   className,
@@ -97,19 +97,19 @@ const EditAddressModal = ({
   shared,
   personalToShared,
 }: {
-  personalToShared?: boolean
-  onlyName?: boolean
-  shared: boolean
-  className?: string
-  addressToEdit: string
-  nameToEdit?: string
-  nickNameToEdit?: string
-  discordToEdit?: string
-  emailToEdit?: string
-  telegramToEdit?: string
-  rolesToEdit?: string[]
+  personalToShared?: boolean;
+  onlyName?: boolean;
+  shared: boolean;
+  className?: string;
+  addressToEdit: string;
+  nameToEdit?: string;
+  nickNameToEdit?: string;
+  discordToEdit?: string;
+  emailToEdit?: string;
+  telegramToEdit?: string;
+  rolesToEdit?: string[];
 }) => {
-  const [openEditModal, setOpenEditModal] = useState<boolean>(false)
+  const [openEditModal, setOpenEditModal] = useState<boolean>(false);
   return (
     <>
       {personalToShared ? (
@@ -162,33 +162,33 @@ const EditAddressModal = ({
         />
       </Modal>
     </>
-  )
-}
+  );
+};
 
 const AddressTable: FC<IAddressProps> = ({ addresses, className }) => {
-  const { openModal } = useModalContext()
+  const { openModal } = useModalContext();
 
   const {
     address: userAddress,
     multisigAddresses,
     activeMultisig,
-  } = useGlobalUserDetailsContext()
-  const { records } = useActiveMultisigContext()
+  } = useGlobalUserDetailsContext();
+  const { records } = useActiveMultisigContext();
 
   const multisig = multisigAddresses.find(
     (item) =>
       item.address === activeMultisig || item.address === activeMultisig,
-  )
+  );
 
   interface DataType {
-    key: React.Key
-    name: React.ReactNode
-    address: React.ReactNode
-    email: React.ReactNode
-    discord: React.ReactNode
-    telegram: React.ReactNode
-    roles: React.ReactNode
-    actions: React.ReactNode
+    key: React.Key;
+    name: React.ReactNode;
+    address: React.ReactNode;
+    email: React.ReactNode;
+    discord: React.ReactNode;
+    telegram: React.ReactNode;
+    roles: React.ReactNode;
+    actions: React.ReactNode;
   }
 
   const columns: ColumnsType<DataType> = [
@@ -237,7 +237,7 @@ const AddressTable: FC<IAddressProps> = ({ addresses, className }) => {
       title: "Actions",
       width: 200,
     },
-  ]
+  ];
 
   const addressBookData: DataType[] = Object.keys(addresses)?.map((address) => {
     return {
@@ -277,7 +277,7 @@ const AddressTable: FC<IAddressProps> = ({ addresses, className }) => {
       ),
       address: (
         <div className="flex items-center">
-          <Avatar account={address} size={5} />
+          <Avatar address={address} size={5} />
           <span
             title={address}
             className="hidden sm:block ml-[6px] max-w-md text-ellipsis overflow-hidden"
@@ -405,8 +405,8 @@ const AddressTable: FC<IAddressProps> = ({ addresses, className }) => {
           {addresses[address]?.telegram ? addresses[address].telegram : "-"}
         </div>
       ),
-    }
-  })
+    };
+  });
 
   return (
     <>
@@ -419,8 +419,8 @@ const AddressTable: FC<IAddressProps> = ({ addresses, className }) => {
         />
       </div>
     </>
-  )
-}
+  );
+};
 
 export default styled(AddressTable)`
   .ant-spin-nested-loading .ant-spin-blur {
@@ -429,4 +429,4 @@ export default styled(AddressTable)`
   .ant-spin-nested-loading .ant-spin-blur::after {
     opacity: 1 !important;
   }
-`
+`;

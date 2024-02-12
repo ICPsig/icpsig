@@ -9,14 +9,16 @@ import React, {
   useContext,
   useEffect,
   useState,
-} from "react"
-import { useNavigate } from "react-router-dom"
+} from "react";
+import { useNavigate } from "react-router-dom";
+import { DEFAULT_ADDRESS_NAME } from "@frontend/global/default";
+import { firebaseFunctionsHeader } from "@frontend/global/firebaseFunctionsHeader";
+import { FIREBASE_FUNCTIONS_URL } from "@frontend/global/firebaseFunctionsUrl";
+import { IdentityBackendService } from "@frontend/services";
+import { EFieldType, IUser, UserDetailsContextType } from "@frontend/types";
+import { convertSafeMultisig } from "@frontend/utils/convertSafeData/convertSafeMultisig";
 
-import { useGlobalIdentityContext } from "./IdentityProviderContext"
-import { EFieldType, UserDetailsContextType } from "@frontend/types"
-import { convertSafeMultisig } from "@frontend/utils/convertSafeData/convertSafeMultisig"
-import { DEFAULT_ADDRESS_NAME } from "@frontend/global/default"
-import { IdentityBackendService } from "@frontend/services"
+import { useGlobalIdentityContext } from "./IdentityProviderContext";
 const initialUserDetailsContext: UserDetailsContextType = {
   activeMultisig: localStorage.getItem("active_multisig") || "",
   address: localStorage.getItem("address") || "",
@@ -28,14 +30,14 @@ const initialUserDetailsContext: UserDetailsContextType = {
   multisigSettings: {},
   notification_preferences: {},
   setActiveMultisigData: (): void => {
-    throw new Error("setUserDetailsContextState function must be overridden")
+    throw new Error("setUserDetailsContextState function must be overridden");
   },
   setIdentityBackend: (): void => {},
   setUserDetailsContextState: (): void => {
-    throw new Error("setUserDetailsContextState function must be overridden")
+    throw new Error("setUserDetailsContextState function must be overridden");
   },
   updateCurrentMultisigData: (): void => {
-    throw new Error("updateCurrentMultisigData function must be overridden")
+    throw new Error("updateCurrentMultisigData function must be overridden");
   },
   transactionFields: {
     ["expense_reimbursement"]: {
@@ -271,139 +273,130 @@ const initialUserDetailsContext: UserDetailsContextType = {
       subfields: {},
     },
   },
-}
+};
 
 export const UserDetailsContext: React.Context<UserDetailsContextType> =
-  createContext(initialUserDetailsContext)
+  createContext(initialUserDetailsContext);
 
 export function useGlobalUserDetailsContext() {
-  return useContext(UserDetailsContext)
+  return useContext(UserDetailsContext);
 }
 
 export const UserDetailsProvider = ({
   children,
 }: React.PropsWithChildren<{}>) => {
-  const { account: address } = useGlobalIdentityContext()
+  const { account: address } = useGlobalIdentityContext();
   const [userDetailsContextState, setUserDetailsContextState] = useState(
     initialUserDetailsContext,
-  )
-  const [activeMultisigData, setActiveMultisigData] = useState<any>({})
-  const navigate = useNavigate()
+  );
+  const [activeMultisigData, setActiveMultisigData] = useState<any>({});
+  const navigate = useNavigate();
   const [identityBackend, setIdentityBackend] =
-    useState<IdentityBackendService>({} as any)
+    useState<IdentityBackendService>({} as any);
 
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(false);
 
   const connectAddress = useCallback(
     async (address?: string, signature?: string) => {
-      if (!address && !localStorage.getItem("address")) {
-        return
-      }
-      setLoading(true)
-      const identityService = new IdentityBackendService()
-      setIdentityBackend(identityService)
+      setLoading(true);
+      const identityService = new IdentityBackendService();
+      setIdentityBackend(identityService);
       const { data: userData, error: connectAddressErr } =
-        await identityService.getAllMultisigByOwner(address || "")
+        await identityService.getAllMultisigByOwner(address || "");
+      const { data: addressBook } = await identityService.getAddressBookOwner(
+        address || "",
+      );
       if (!connectAddressErr && userData) {
         setUserDetailsContextState((prevState) => {
           return {
             ...prevState,
             activeMultisig:
               localStorage.getItem("active_multisig") ||
-              userData?.multisigAddresses?.[0]?.address ||
+              userData?.[0]?.address ||
               "",
-            address: userData?.address,
-            addressBook: userData?.addressBook || [],
+            addressBook: addressBook?.addressBook || [],
             createdAt: userData?.created_at,
-            multisigAddresses: userData?.multisigAddresses || [],
-            multisigSettings: userData?.multisigSettings || {},
+            multisigAddresses: userData || [],
+            multisigSettings: {},
             notification_preferences:
               userData?.notification_preferences ||
               initialUserDetailsContext.notification_preferences,
-            transactionFields:
-              userData?.transactionFields ||
-              initialUserDetailsContext.transactionFields,
-          }
-        })
+            transactionFields: initialUserDetailsContext.transactionFields,
+          };
+        });
       } else {
-        localStorage.clear()
-        setUserDetailsContextState(initialUserDetailsContext)
-        navigate("/")
+        localStorage.clear();
+        setUserDetailsContextState(initialUserDetailsContext);
+        navigate("/");
       }
-      setLoading(false)
+      setLoading(false);
       // eslint-disable-next-line react-hooks/exhaustive-deps
     },
     [],
-  )
+  );
 
   const updateCurrentMultisigData = useCallback(async () => {
     if (
       !userDetailsContextState.activeMultisig ||
-      !userDetailsContextState.multisigAddresses ||
-      !userDetailsContextState.address
+      !userDetailsContextState.multisigAddresses
     ) {
-      return
+      return;
     }
     try {
-      let activeData: any = {}
+      let activeData: any = {};
       const multisig = userDetailsContextState.multisigAddresses.find(
         (multi) => multi.address === userDetailsContextState.activeMultisig,
-      )
+      );
       if (!multisig) {
-        return
+        return;
       }
       if (!userDetailsContextState.activeMultisig) {
-        return
+        return;
       }
-      const multiData = await identityBackend.getMultisigInfoByAddress(
-        userDetailsContextState.activeMultisig,
-      )
-      if (multiData) {
-        activeData = convertSafeMultisig({
-          ...multiData,
-          name: multisig?.name || DEFAULT_ADDRESS_NAME,
-        })
-      }
-      setActiveMultisigData({ ...activeData })
+      const { data: multiData } =
+        await identityBackend.getMultisigInfoByAddress(
+          userDetailsContextState.activeMultisig,
+        );
+      setActiveMultisigData(multiData?.[0]);
     } catch (err) {
-      console.log("err from update current multisig data", err)
+      console.log("err from update current multisig data", err);
     }
   }, [
     identityBackend,
     userDetailsContextState.activeMultisig,
     userDetailsContextState.address,
     userDetailsContextState.multisigAddresses,
-  ])
+  ]);
 
   useEffect(() => {
     if (!address) {
-      return
+      return;
     }
     if (localStorage.getItem("address") !== address) {
-      localStorage.removeItem("signature")
-      localStorage.removeItem("address")
-      setUserDetailsContextState(initialUserDetailsContext)
-      navigate("/", { replace: true })
-      setLoading(false)
-      return
+      localStorage.removeItem("signature");
+      localStorage.removeItem("address");
+      setUserDetailsContextState(initialUserDetailsContext);
+      navigate("/", { replace: true });
+      setLoading(false);
+      return;
     }
     if (localStorage.getItem("signature")) {
-      connectAddress()
+      connectAddress();
     } else {
-      localStorage.clear()
-      setLoading(false)
-      navigate("/")
+      localStorage.clear();
+      setLoading(false);
+      navigate("/");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [address])
+  }, [address]);
 
   useEffect(() => {
     if (!userDetailsContextState.activeMultisig) {
-      return
+      return;
     }
-    updateCurrentMultisigData()
-  }, [updateCurrentMultisigData, userDetailsContextState.activeMultisig])
-
+    updateCurrentMultisigData();
+  }, [updateCurrentMultisigData, userDetailsContextState.activeMultisig]);
+  console.log(activeMultisigData);
   return (
     <UserDetailsContext.Provider
       value={{
@@ -411,6 +404,7 @@ export const UserDetailsProvider = ({
         connectAddress,
         loading,
         ...userDetailsContextState,
+        address,
         identityBackend,
         setActiveMultisigData,
         setIdentityBackend,
@@ -421,5 +415,5 @@ export const UserDetailsProvider = ({
     >
       <>{children}</>
     </UserDetailsContext.Provider>
-  )
-}
+  );
+};

@@ -1,25 +1,25 @@
 // Copyright 2022-2023 @Polkasafe/polkaSafe-ui authors & contributors
 // This software may be modified and distributed under the terms
 // of the Apache-2.0 license. See the LICENSE file for details.
-import { ArrowLeftOutlined } from "@ant-design/icons"
-import { Button, Form, Input } from "antd"
-import React, { useCallback, useEffect, useState } from "react"
-import ConnectWalletImg from "@frontend/assets/connect-wallet.svg"
-import { useGlobalIdentityContext } from "@frontend/context/IdentityProviderContext"
-import { useGlobalUserDetailsContext } from "@frontend/context/UserDetailsContext"
-import { firebaseFunctionsHeader } from "@frontend/global/firebaseFunctionsHeader"
-import { FIREBASE_FUNCTIONS_URL } from "@frontend/global/firebaseFunctionsUrl"
-import { IUser } from "@frontend/types"
-import { WarningCircleIcon } from "@frontend/ui-components/CustomIcons"
+import { ArrowLeftOutlined } from "@ant-design/icons";
+import { Button, Form, Input } from "antd";
+import React, { useCallback, useEffect, useState } from "react";
+import ConnectWalletImg from "@frontend/assets/connect-wallet.svg";
+import { useGlobalIdentityContext } from "@frontend/context/IdentityProviderContext";
+import { useGlobalUserDetailsContext } from "@frontend/context/UserDetailsContext";
+import { firebaseFunctionsHeader } from "@frontend/global/firebaseFunctionsHeader";
+import { FIREBASE_FUNCTIONS_URL } from "@frontend/global/firebaseFunctionsUrl";
+import { IUser } from "@frontend/types";
+import { WarningCircleIcon } from "@frontend/ui-components/CustomIcons";
 
 const ConnectWallet = () => {
-  const { identity, login, setAccounts, account, setPrinciple } =
-    useGlobalIdentityContext()
-  const [loading, setLoading] = useState<boolean>(false)
-  const { connectAddress } = useGlobalUserDetailsContext()
-  const [tfaToken, setTfaToken] = useState<string>("")
-  const [authCode, setAuthCode] = useState<number>()
-  const [tokenExpired, setTokenExpired] = useState<boolean>(false)
+  const { identity, login, setAccounts, account, setPrincipal } =
+    useGlobalIdentityContext();
+  const [loading, setLoading] = useState<boolean>(false);
+  const { connectAddress } = useGlobalUserDetailsContext();
+  const [tfaToken, setTfaToken] = useState<string>("");
+  const [authCode, setAuthCode] = useState<number>();
+  const [tokenExpired, setTokenExpired] = useState<boolean>(false);
 
   const handlePolkasafeLogin = async () => {
     const res = await fetch(`${FIREBASE_FUNCTIONS_URL}/login`, {
@@ -28,35 +28,36 @@ const ConnectWallet = () => {
         "Content-Type": "application/json",
       },
       method: "POST",
-    })
-    const { token } = await res.json()
-  }
+    });
+    const { token } = await res.json();
+  };
 
-  const handleLogin = useCallback(async () => {
+  const handleLoginByInternetIdentity = useCallback(async () => {
     try {
-      setLoading(true)
+      setLoading(true);
       if (!identity) {
-        login()
-        setLoading(false)
-        return
+        login();
+        connectAddress();
+        setLoading(false);
+        return;
       }
-      handlePlugLogin()
     } catch (err) {
-      console.log(err)
+      console.log(err);
     }
-    setLoading(false)
-  }, [])
+    setLoading(false);
+  }, []);
 
-  const handlePlugLogin = async () => {
+  const handleLoginByPlug = async () => {
     //@ts-ignore
-    const icWidnowObject = window.ic.plug
+    const icWidnowObject = window.ic.plug;
+
     if (icWidnowObject?.sessionManager?.sessionData) {
-      return
+      return;
     }
-    const whitelist = identity.whitelist
-    const host = "https://mainnet.dfinity.network"
+    const whitelist = [];
+    const host = "https://mainnet.dfinity.network";
     //@ts-ignore
-    const onConnectionUpdate = async () => {}
+    const onConnectionUpdate = async () => {};
 
     try {
       await icWidnowObject.requestConnect({
@@ -64,24 +65,25 @@ const ConnectWallet = () => {
         host,
         onConnectionUpdate,
         timeout: 100000,
-      })
-      const principal = icWidnowObject.sessionManager.sessionData.principalId
-      const account = icWidnowObject.sessionManager.sessionData.accountId
+      });
+      const principal = icWidnowObject.sessionManager.sessionData.principalId;
+      const account = icWidnowObject.sessionManager.sessionData.accountId;
 
-      setPrinciple(principal)
-      setAccounts(account)
+      setPrincipal(principal);
+      setAccounts(account);
       // backend call for checking if identity has 2fa enabled (if yes -> call handleSubmitAuthCode)
-      localStorage.setItem("address", account)
-      connectAddress()
+      localStorage.setItem("principal", principal);
+      localStorage.setItem("address", account);
+      connectAddress(account);
     } catch (e) {
-      console.log(e)
+      console.log(e);
     }
-  }
+  };
 
   const handleSubmitAuthCode = async () => {
-    if (!tfaToken) return
+    if (!tfaToken) return;
 
-    setLoading(true)
+    setLoading(true);
     try {
       // api call for validate 2fa auth code from authenticator app
       const { data: token, error: validate2FAError } = await (
@@ -92,23 +94,23 @@ const ConnectWallet = () => {
           },
           body: JSON.stringify({ address: "" }),
         })
-      ).json()
+      ).json();
 
       if (validate2FAError) {
         if (validate2FAError === "2FA token expired.") {
-          setTokenExpired(true)
+          setTokenExpired(true);
         }
-        setLoading(false)
+        setLoading(false);
       }
 
       if (!validate2FAError && token) {
-        handlePlugLogin()
+        handleLoginByPlug();
       }
     } catch (error) {
-      console.log(error)
-      setLoading(false)
+      console.log(error);
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <div className="rounded-xl flex flex-col items-center justify-center min-h-[400px] bg-bg-main">
@@ -176,8 +178,8 @@ const ConnectWallet = () => {
               icon={<ArrowLeftOutlined />}
               disabled={loading}
               onClick={() => {
-                setTfaToken("")
-                setTokenExpired(false)
+                setTfaToken("");
+                setTokenExpired(false);
               }}
               className="mt-[25px] text-sm border-none outline-none flex items-center justify-center text-primary p-0"
             >
@@ -193,33 +195,30 @@ const ConnectWallet = () => {
             <p className="text-text_secondary text-sm font-normal mt-[20px] mb-2">
               Your first step towards creating a safe & secure MultiSig
             </p>
-            {identity ? (
-              <div className="mt-[20px]">
-                <Button
-                  loading={loading}
-                  onClick={handlePlugLogin}
-                  className={`mt-[25px] text-sm border-none outline-none flex items-center justify-center bg-primary text-white
-              max-w-[320px] w-full`}
-                >
-                  Sign In
-                </Button>
-              </div>
-            ) : (
+            <div className="flex mt-10 gap-5">
               <Button
-                onClick={handleLogin}
+                loading={loading}
+                onClick={handleLoginByInternetIdentity}
+                className={`mt-[25px] text-sm border-none outline-none flex items-center justify-center bg-primary text-white
+              max-w-[320px] w-full`}
+              >
+                Sign In by internet identity
+              </Button>
+              <Button
+                onClick={handleLoginByPlug}
                 loading={loading}
                 className={
                   "mt-[25px] text-sm border-none outline-none flex items-center justify-center bg-primary text-white"
                 }
               >
-                Connect
+                Sign In by plug wallet
               </Button>
-            )}
+            </div>
           </>
         )}
       </>
     </div>
-  )
-}
+  );
+};
 
-export default ConnectWallet
+export default ConnectWallet;

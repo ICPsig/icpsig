@@ -166,24 +166,25 @@ shared ({ caller = installer_ }) actor class Multisig() = this {
 
   // get addressbook
   public shared query func get_address_book(
-    caller: Principal,
-  ) : async List.List<Principal> {
+    caller: Text,
+  ) : async [Principal] {
 
-    let from_address_book = address_book.get(caller);
+    let from_address_book = address_book.get(Principal.fromText(caller));
 
     switch (from_address_book) {
       case null {throw Error.reject("Address book does not exist")};
-      case (?from_address_book) { from_address_book }
+      case (?from_address_book) {List.toArray(from_address_book) }
     }
   };
 
   // add adddress to multisig vault
   public shared func add_address_to_address_book(
     owner: Text,
-    address: Principal,
-  ) : async List.List<Principal> {
+    addressToAdd: Text,
+  ) : async [Principal] {
 
     let caller = Principal.fromText(owner);
+    let address = Principal.fromText(addressToAdd); 
 
     let from_address_book = switch (address_book.get(caller)) {
       case null { throw Error.reject("Address Book does not exist"); };
@@ -196,7 +197,7 @@ shared ({ caller = installer_ }) actor class Multisig() = this {
       case null {
         let updated_address_book = List.push(address, from_address_book);
         address_book.put(caller, updated_address_book);
-        return updated_address_book;
+        return List.toArray(updated_address_book);
       };
       case (?is_address_exist) {
         throw Error.reject("Address is already added");
@@ -206,16 +207,15 @@ shared ({ caller = installer_ }) actor class Multisig() = this {
 
   // create multisig vault
   public shared func create_vault(
-    signatory : List.List<Text>,
+    signatories : [Text],
     threshold : Nat,
     owner: Text,
   ) : async Text {
-
     let id = ULID.toText(idCreationEntropy_.new());
     let caller = Principal.fromText(owner);
     let canisterId = getInvoiceCanisterId_();
     let address : Text = Adapter.encodeAddress(Adapter.computeInvoiceSubaccountAddress(id, caller, canisterId));
-    let signers: List.List<Principal> = List.map(List.push(owner, signatory), Principal.fromText);
+    let signers: List.List<Principal> = List.map(List.push(owner, List.fromArray(signatories)), Principal.fromText);
 
     let vault : Vault = {
       signers = signers;
@@ -324,7 +324,7 @@ shared ({ caller = installer_ }) actor class Multisig() = this {
   // add signatory
   public shared ({ caller }) func add_signatory(
     vault : Text,
-    signatory : Principal,
+    signatory : Text,
     threshold : Nat
   ) : async Bool {
 
@@ -341,7 +341,7 @@ shared ({ caller = installer_ }) actor class Multisig() = this {
       case (?s) {s}
     };
 
-    let newSigners = List.push(signatory, signers);
+    let newSigners = List.push(Principal.fromText(signatory), signers);
 
     let newVault : Vault = {
       signers = newSigners;
@@ -391,9 +391,10 @@ shared ({ caller = installer_ }) actor class Multisig() = this {
   public shared func approve_transaction(
     vault : Text,
     transactionId : Text,
-    caller: Principal
+    user: Text
   ) : async Bool {
 
+    let caller = Principal.fromText(user);
     let vault_obj = switch (vaults_map.get(vault)){
       case null {
           throw Error.reject("Vault does not exist");
@@ -454,11 +455,12 @@ shared ({ caller = installer_ }) actor class Multisig() = this {
 
   // cancel transaction
   public shared func cancel_transaction(
-    caller: Principal,
     vault : Text,
-    transactionId : Text
+    transactionId : Text,
+    user: Text
   ) : async Bool {
 
+    let caller = Principal.fromText(user);
     let vault_obj = switch (vaults_map.get(vault)){
       case null {
           throw Error.reject("Vault does not exist");
@@ -492,10 +494,11 @@ shared ({ caller = installer_ }) actor class Multisig() = this {
 
   // get transactions
   public shared query func get_transactions(
-    caller: Principal,
     vault : Text,
+    user: Text
   ) : async [Transaction] {
 
+    let caller = Principal.fromText(user);
     switch (vault_transations.get(vault)){
       case null {
           return [];

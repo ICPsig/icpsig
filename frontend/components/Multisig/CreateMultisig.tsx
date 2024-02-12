@@ -3,75 +3,106 @@
 // of the Apache-2.0 license. See the LICENSE file for details.
 /* eslint-disable sort-keys */
 
-import { Form, Input, InputNumber, Modal, Spin } from "antd"
-import classNames from "classnames"
-import React, { FC, useState } from "react"
-import CancelBtn from "../../components/Multisig/CancelBtn"
-import AddBtn from "../../components/Multisig/ModalBtn"
-import { useActiveMultisigContext } from "@frontend/context/ActiveMultisigContext"
-import { useGlobalUserDetailsContext } from "@frontend/context/UserDetailsContext"
-import { DEFAULT_ADDRESS_NAME } from "../../global/default"
-import { IMultisigAddress, ISharedAddressBookRecord } from "@frontend/types"
-import { NotificationStatus } from "@frontend/types"
+import { Form, Input, InputNumber, Modal, Spin } from "antd";
+import classNames from "classnames";
+import React, { FC, useState } from "react";
+import CancelBtn from "../../components/Multisig/CancelBtn";
+import AddBtn from "../../components/Multisig/ModalBtn";
+import { useActiveMultisigContext } from "@frontend/context/ActiveMultisigContext";
+import { useGlobalUserDetailsContext } from "@frontend/context/UserDetailsContext";
+import { DEFAULT_ADDRESS_NAME } from "../../global/default";
+import { IMultisigAddress, ISharedAddressBookRecord } from "../../types";
+import { NotificationStatus } from "../../types";
 import {
   DashDotIcon,
   OutlineCloseIcon,
-} from "@frontend/ui-components/CustomIcons"
-import PrimaryButton from "@frontend/ui-components/PrimaryButton"
-import queueNotification from "@frontend/ui-components/QueueNotification"
+} from "@frontend/ui-components/CustomIcons";
+import PrimaryButton from "@frontend/ui-components/PrimaryButton";
+import queueNotification from "@frontend/ui-components/QueueNotification";
 
-import DragDrop from "../Multisig/DragDrop"
-import Search from "../Multisig/Search"
-import Signatory from "./Signatory"
-import AddAddress from "../AddressBook/AddAddress"
-import SuccessTransactionLottie from "@frontend/ui-components/lottie-graphics/SuccessTransaction"
-import FailedTransactionLottie from "@frontend/ui-components/lottie-graphics/FailedTransaction"
-import LoadingLottie from "@frontend/ui-components/lottie-graphics/Loading"
+import DragDrop from "../Multisig/DragDrop";
+import Search from "../Multisig/Search";
+import Signatory from "./Signatory";
+import AddAddress from "../AddressBook/AddAddress";
+import SuccessTransactionLottie from "@frontend/ui-components/lottie-graphics/SuccessTransaction";
+import FailedTransactionLottie from "@frontend/ui-components/lottie-graphics/FailedTransaction";
+import LoadingLottie from "@frontend/ui-components/lottie-graphics/Loading";
+import { useGlobalIdentityContext } from "@frontend/context/IdentityProviderContext";
 
 interface IMultisigProps {
-  className?: string
-  onCancel?: () => void
-  isModalPopup?: boolean
-  homepage?: boolean
+  className?: string;
+  onCancel?: () => void;
+  isModalPopup?: boolean;
+  homepage?: boolean;
 }
 
 const CreateMultisig: React.FC<IMultisigProps> = ({
   onCancel,
   homepage = false,
 }) => {
+  const { account: address } = useGlobalIdentityContext();
   const {
     setUserDetailsContextState,
     address: userAddress,
     multisigAddresses,
     addressBook,
-  } = useGlobalUserDetailsContext()
-  const { records, setActiveMultisigContextState } = useActiveMultisigContext()
+  } = useGlobalUserDetailsContext();
+  const { records, setActiveMultisigContextState } = useActiveMultisigContext();
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [uploadSignatoriesJson, setUploadSignatoriesJson] = useState(false)
+  const [uploadSignatoriesJson, setUploadSignatoriesJson] = useState(false);
 
-  const [multisigName, setMultisigName] = useState<string>("")
-  const [threshold, setThreshold] = useState<number>(2)
-  const [signatories, setSignatories] = useState<string[]>([userAddress])
-  const { identityBackend } = useGlobalUserDetailsContext()
+  const [multisigName, setMultisigName] = useState<string>("");
+  const [threshold, setThreshold] = useState<number>(2);
+  const [signatories, setSignatories] = useState<string[]>([userAddress]);
+  const { identityBackend } = useGlobalUserDetailsContext();
 
-  const [loading, setLoading] = useState<boolean>(false)
-  const [success] = useState<boolean>(false)
-  const [failure, setFailure] = useState<boolean>(false)
-  const [loadingMessages] = useState<string>("")
-  const [addAddress, setAddAddress] = useState<string>("")
-  const [showAddressModal, setShowAddressModal] = useState<boolean>(false)
-  const [form] = Form.useForm()
+  const [loading, setLoading] = useState<boolean>(false);
+  const [success] = useState<boolean>(false);
+  const [failure, setFailure] = useState<boolean>(false);
+  const [loadingMessages] = useState<string>("");
+  const [addAddress, setAddAddress] = useState<string>("");
+  const [showAddressModal, setShowAddressModal] = useState<boolean>(false);
+  const [form] = Form.useForm();
 
   const [createMultisigData, setCreateMultisigData] =
-    useState<IMultisigAddress>({} as any)
+    useState<IMultisigAddress>({} as any);
 
   const handleMultisigCreate = async () => {
-    setLoading(true)
+    setLoading(true);
     try {
-      const multisigData = (
-        await identityBackend.createMultisig(signatories as [string], threshold)
-      ).data
+      const multisigSignatories = signatories
+        .filter((a) => a)
+        .map((a) => a.substring(2));
+      const { data: multisigData, error: multisigError } =
+        await identityBackend.createMultisig(
+          multisigSignatories as [string],
+          threshold,
+          multisigName,
+          address,
+        );
+
+      if (!multisigData) {
+        queueNotification({
+          header: "Error!",
+          message: "Something went wrong",
+          status: NotificationStatus.ERROR,
+        });
+        setLoading(false);
+        setFailure(true);
+        return;
+      }
+
+      if (multisigError) {
+        queueNotification({
+          header: "Error!",
+          message: multisigError,
+          status: NotificationStatus.ERROR,
+        });
+        setLoading(false);
+        setFailure(true);
+        return;
+      }
 
       if (multisigData) {
         if (
@@ -84,21 +115,21 @@ const CreateMultisig: React.FC<IMultisigProps> = ({
             header: "Multisig Exist!",
             message: "Please try adding a different multisig.",
             status: NotificationStatus.WARNING,
-          })
-          setLoading(false)
+          });
+          setLoading(false);
           setUserDetailsContextState((prev) => ({
             ...prev,
-            activeMultisig: multisigData?.address || prev.activeMultisig,
-          }))
-          return
+            activeMultisig: multisigData.address || prev.activeMultisig,
+          }));
+          return;
         }
         queueNotification({
           header: "Success!",
           message: `Your Multisig ${multisigName} has been created successfully!`,
           status: NotificationStatus.SUCCESS,
-        })
-        setCreateMultisigData(multisigData)
-        onCancel?.()
+        });
+        setCreateMultisigData(multisigData);
+        onCancel?.();
         setUserDetailsContextState((prevState) => {
           return {
             ...prevState,
@@ -114,11 +145,11 @@ const CreateMultisig: React.FC<IMultisigProps> = ({
                 deleted: false,
               },
             },
-          }
-        })
-        const records: { [address: string]: ISharedAddressBookRecord } = {}
-        multisigData.signatories.forEach((signatory) => {
-          const data = addressBook.find((a) => a.address === signatory)
+          };
+        });
+        const records: { [address: string]: ISharedAddressBookRecord } = {};
+        multisigData.signatories.forEach((signatory: any) => {
+          const data = addressBook.find((a) => a.address === signatory);
           records[signatory] = {
             address: signatory,
             name: data?.name || DEFAULT_ADDRESS_NAME,
@@ -126,26 +157,26 @@ const CreateMultisig: React.FC<IMultisigProps> = ({
             discord: data?.discord,
             telegram: data?.telegram,
             roles: data?.roles,
-          }
-        })
+          };
+        });
         setActiveMultisigContextState((prev) => ({
           ...prev,
           records,
           multisig: multisigData.address,
-        }))
+        }));
       }
     } catch (error) {
-      console.log("ERROR", error)
-      setFailure(true)
+      console.log("ERROR", error);
+      setFailure(true);
 
       queueNotification({
         header: "Something went wrong.",
         message: "Please try again with different addresses.",
         status: NotificationStatus.ERROR,
-      })
+      });
     }
-    setLoading(false)
-  }
+    setLoading(false);
+  };
 
   const AddAddressModal: FC = () => {
     return (
@@ -187,16 +218,16 @@ const CreateMultisig: React.FC<IMultisigProps> = ({
           />
         </Modal>
       </>
-    )
-  }
+    );
+  };
 
   const CreateMultisigSuccessScreen: FC = () => {
     return (
       <div className="flex flex-col h-full">
         <SuccessTransactionLottie message="Multisig created successfully!" />
       </div>
-    )
-  }
+    );
+  };
   return (
     <>
       <Spin
@@ -365,7 +396,7 @@ const CreateMultisig: React.FC<IMultisigProps> = ({
         </Form>
       </Spin>
     </>
-  )
-}
+  );
+};
 
-export default CreateMultisig
+export default CreateMultisig;

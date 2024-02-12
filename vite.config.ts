@@ -1,19 +1,20 @@
-import { defineConfig } from "vite"
-import reactRefresh from "@vitejs/plugin-react-refresh"
-import path from "path"
-import dfxJson from "./dfx.json"
-import fs from "fs"
-import tsconfigPaths from "vite-tsconfig-paths"
+import svgr from "@svgr/rollup";
+import { defineConfig } from "vite";
+import reactRefresh from "@vitejs/plugin-react-refresh";
+import path from "path";
+import dfxJson from "./dfx.json";
+import fs from "fs";
+import tsconfigPaths from "vite-tsconfig-paths";
 
-const isDev = process.env["DFX_NETWORK"] !== "ic"
+const isDev = process.env["DFX_NETWORK"] !== "ic";
 
-type Network = "ic" | "local"
+type Network = "ic" | "local";
 
 interface CanisterIds {
-  [key: string]: { [key in Network]: string }
+  [key: string]: { [key in Network]: string };
 }
 
-let canisterIds: CanisterIds
+let canisterIds: CanisterIds;
 try {
   canisterIds = JSON.parse(
     fs
@@ -21,9 +22,9 @@ try {
         isDev ? ".dfx/local/canister_ids.json" : "./canister_ids.json",
       )
       .toString(),
-  )
+  );
 } catch (e) {
-  console.error("\n⚠️  Before starting the dev server run: dfx deploy\n\n")
+  console.error("\n⚠️  Before starting the dev server run: dfx deploy\n\n");
 }
 
 // List of all aliases for canisters
@@ -31,22 +32,22 @@ try {
 const aliases = Object.entries(dfxJson.canisters).reduce(
   (acc, [name, _value]) => {
     // Get the network name, or `local` by default.
-    const networkName = process.env["DFX_NETWORK"] ?? "local"
+    const networkName = process.env["DFX_NETWORK"] ?? "local";
     const outputRoot = path.join(
       __dirname,
       ".dfx",
       networkName,
       "canisters",
       name,
-    )
+    );
 
     return {
       ...acc,
       ["canisters/" + name]: path.join(outputRoot, "index" + ".js"),
-    }
+    };
   },
   {},
-)
+);
 
 // Generate canister ids, required by the generated canister code in .dfx/local/canisters/*
 // This strange way of JSON.stringifying the value is required by vite
@@ -58,15 +59,15 @@ const canisterDefinitions = Object.entries(canisterIds).reduce(
       : JSON.stringify(val.ic),
   }),
   {},
-)
+);
 
 // Gets the port dfx is running on from dfx.json
-const DFX_PORT = dfxJson.networks.local.bind.split(":")[1]
+const DFX_PORT = dfxJson.networks.local.bind.split(":")[1];
 
 // See guide on how to configure Vite at:
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [reactRefresh(), tsconfigPaths()],
+  plugins: [reactRefresh(), tsconfigPaths(), svgr()],
   resolve: {
     alias: {
       // Here we tell Vite the "fake" modules that we want to define
@@ -94,4 +95,4 @@ export default defineConfig({
       isDev ? "development" : "production",
     ),
   },
-})
+});

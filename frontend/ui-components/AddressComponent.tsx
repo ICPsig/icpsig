@@ -1,23 +1,23 @@
 // Copyright 2022-2023 @Polkasafe/polkaSafe-ui authors & contributors
 // This software may be modified and distributed under the terms
 // of the Apache-2.0 license. See the LICENSE file for details.
-import { Badge } from "antd"
-import React from "react"
-import { useActiveMultisigContext } from "@frontend/context/ActiveMultisigContext"
-import { useGlobalUserDetailsContext } from "@frontend/context/UserDetailsContext"
-import { DEFAULT_ADDRESS_NAME } from "@frontend/global/default"
-import copyText from "@frontend/utils/copyText"
-import shortenAddress from "@frontend/utils/shortenAddress"
+import { Badge } from "antd";
+import React from "react";
+import { useActiveMultisigContext } from "@frontend/context/ActiveMultisigContext";
+import { useGlobalUserDetailsContext } from "@frontend/context/UserDetailsContext";
+import { DEFAULT_ADDRESS_NAME } from "@frontend/global/default";
+import copyText from "@frontend/utils/copyText";
+import shortenAddress from "@frontend/utils/shortenAddress";
 
-import { CopyIcon, ExternalLinkIcon } from "./CustomIcons"
-import Avatar from "@frontend/components/Avatar/Avatar"
+import { CopyIcon, ExternalLinkIcon } from "./CustomIcons";
+import Avatar from "@frontend/components/Avatar/Avatar";
 
 interface IAddressComponent {
-  address: string
-  iconSize?: number
-  withBadge?: boolean
-  name?: string
-  onlyAddress?: boolean
+  address: string;
+  iconSize?: number;
+  withBadge?: boolean;
+  name?: string;
+  onlyAddress?: boolean;
 }
 
 const AddressComponent = ({
@@ -28,14 +28,14 @@ const AddressComponent = ({
   onlyAddress,
 }: IAddressComponent) => {
   const { addressBook, multisigAddresses, activeMultisig } =
-    useGlobalUserDetailsContext()
-  const { records } = useActiveMultisigContext()
+    useGlobalUserDetailsContext();
+  const { records } = useActiveMultisigContext();
 
   const multisig = multisigAddresses.find(
     (item) => item.address === activeMultisig || item.proxy === activeMultisig,
-  )
+  );
 
-  const addressObj = addressBook?.find((item) => item.address === address)
+  const addressObj = addressBook?.find((item) => item.address === address);
 
   return (
     <div className=" flex items-center gap-x-3">
@@ -48,16 +48,16 @@ const AddressComponent = ({
             color="#1573FE"
           >
             <div className="border-2 border-primary p-1 rounded-full flex justify-center items-center">
-              <Avatar size={6} account={address} />
+              <Avatar size={6} address={address} />
             </div>
           </Badge>
         ) : (
           <div className="border-2 border-primary p-1 rounded-full flex justify-center items-center">
-            <Avatar account={address} size={6} />
+            <Avatar address={address} size={6} />
           </div>
         )
       ) : (
-        <Avatar account={address} size={6} />
+        <Avatar address={address} size={6} />
       )}
       {onlyAddress ? (
         <div className="flex items-center gap-x-3 font-normal text-sm text-text_secondary">
@@ -103,7 +103,7 @@ const AddressComponent = ({
         </div>
       )}
     </div>
-  )
-}
+  );
+};
 
-export default AddressComponent
+export default AddressComponent;

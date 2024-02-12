@@ -12,13 +12,16 @@
     "@connect2ic/react": "^0.1.0",
     "@dfinity/agent": "^0.11.3",
     "@dfinity/nns": "^3.1.1",
+    "@svgr/rollup": "^8.1.0",
     "antd": "^5.14.0",
+    "axios": "^1.6.7",
     "lucide-react": "^0.325.0",
     "react": "^18.1.0",
     "react-dom": "^18.1.0",
     "react-lottie-player": "^1.5.6",
     "react-router-dom": "^6.22.0",
     "styled-components": "^6.1.8",
+    "vite-plugin-svgr": "^4.2.0",
     "vite-tsconfig-paths": "^4.3.1"
   },
   "devDependencies": {

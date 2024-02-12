@@ -2,20 +2,20 @@
 // This software may be modified and distributed under the terms
 // of the Apache-2.0 license. See the LICENSE file for details.
 
-import { SyncOutlined } from "@ant-design/icons"
-import { Button } from "antd"
-import classNames from "classnames"
-import React, { useEffect, useState } from "react"
-import { Link, useLocation } from "react-router-dom"
-import History from "@frontend/components/Transactions/History"
-import Queued from "@frontend/components/Transactions/Queued"
-import { useGlobalUserDetailsContext } from "@frontend/context/UserDetailsContext"
+import { SyncOutlined } from "@ant-design/icons";
+import { Button } from "antd";
+import classNames from "classnames";
+import React, { useEffect, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
+import History from "@frontend/components/Transactions/History";
+import Queued from "@frontend/components/Transactions/Queued";
+import { useGlobalUserDetailsContext } from "@frontend/context/UserDetailsContext";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import {
   ExternalLinkIcon,
   HistoryIcon,
   QueueIcon,
-} from "@frontend/ui-components/CustomIcons"
+} from "@frontend/ui-components/CustomIcons";
 
 enum ETab {
   QUEUE,
@@ -23,22 +23,22 @@ enum ETab {
 }
 
 const Transactions = () => {
-  const [tab, setTab] = useState(ETab.QUEUE)
-  const location = useLocation()
-  const { address } = useGlobalUserDetailsContext()
+  const [tab, setTab] = useState(ETab.QUEUE);
+  const location = useLocation();
+  const { address } = useGlobalUserDetailsContext();
 
-  const [loading, setLoading] = useState<boolean>(false)
-  const [refetch, setRefetch] = useState<boolean>(false)
+  const [loading, setLoading] = useState<boolean>(false);
+  const [refetch, setRefetch] = useState<boolean>(false);
 
   useEffect(() => {
-    const search = location.search.split("=")[1]
+    const search = location.search.split("=")[1];
     if (search === "History") {
-      setTab(ETab.HISTORY)
+      setTab(ETab.HISTORY);
     }
     if (search === "Queue") {
-      setTab(ETab.QUEUE)
+      setTab(ETab.QUEUE);
     }
-  }, [location.search])
+  }, [location.search]);
 
   return (
     <>
@@ -110,7 +110,7 @@ const Transactions = () => {
         )}
       </div>
     </>
-  )
-}
+  );
+};
 
-export default Transactions
+export default Transactions;

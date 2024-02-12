@@ -2,35 +2,36 @@
 // This software may be modified and distributed under the terms
 // of the Apache-2.0 license. See the LICENSE file for details.
 
-import { MinusCircleOutlined, PlusCircleOutlined } from "@ant-design/icons"
-import { Button, Checkbox, Form, Input, Modal, Select, Spin } from "antd"
-import React, { useEffect, useState } from "react"
-import LoadingLottie from "@frontend/ui-components/lottie-graphics/Loading"
-import CancelBtn from "../../components/Settings/CancelBtn"
-import AddBtn from "../../components/Settings/ModalBtn"
-import { useActiveMultisigContext } from "@frontend/context/ActiveMultisigContext"
-import { useModalContext } from "@frontend/context/ModalContext"
-import { useGlobalUserDetailsContext } from "@frontend/context/UserDetailsContext"
-import { EMAIL_REGEX } from "../../global/default"
-import { firebaseFunctionsHeader } from "../../global/firebaseFunctionsHeader"
-import { FIREBASE_FUNCTIONS_URL } from "../../global/firebaseFunctionsUrl"
+import { MinusCircleOutlined, PlusCircleOutlined } from "@ant-design/icons";
+import { Button, Checkbox, Form, Input, Modal, Select, Spin } from "antd";
+import React, { useEffect, useState } from "react";
+import LoadingLottie from "@frontend/ui-components/lottie-graphics/Loading";
+import CancelBtn from "../../components/Settings/CancelBtn";
+import AddBtn from "../../components/Settings/ModalBtn";
+import { useActiveMultisigContext } from "@frontend/context/ActiveMultisigContext";
+import { useModalContext } from "@frontend/context/ModalContext";
+import { useGlobalUserDetailsContext } from "@frontend/context/UserDetailsContext";
+import { DEFAULT_ADDRESS_NAME, EMAIL_REGEX } from "../../global/default";
+import { firebaseFunctionsHeader } from "../../global/firebaseFunctionsHeader";
+import { FIREBASE_FUNCTIONS_URL } from "../../global/firebaseFunctionsUrl";
 import {
   IAddressBookItem,
   ISharedAddressBooks,
   NotificationStatus,
-} from "@frontend/types"
+} from "@frontend/types";
 import {
   OutlineCloseIcon,
   WarningCircleIcon,
-} from "@frontend/ui-components/CustomIcons"
-import queueNotification from "@frontend/ui-components/QueueNotification"
-import styled from "styled-components"
+} from "@frontend/ui-components/CustomIcons";
+import queueNotification from "@frontend/ui-components/QueueNotification";
+import styled from "styled-components";
+import { useGlobalIdentityContext } from "@frontend/context/IdentityProviderContext";
 
 interface IMultisigProps {
-  className?: string
-  addAddress?: string
-  onCancel?: () => void
-  setAddAddress?: React.Dispatch<React.SetStateAction<string>>
+  className?: string;
+  addAddress?: string;
+  onCancel?: () => void;
+  setAddAddress?: React.Dispatch<React.SetStateAction<string>>;
 }
 
 const EditAddressModal = ({
@@ -39,10 +40,10 @@ const EditAddressModal = ({
   open,
   onCancel,
 }: {
-  open: boolean
-  className?: string
-  onCancel: () => void
-  confirm: () => Promise<void>
+  open: boolean;
+  className?: string;
+  onCancel: () => void;
+  confirm: () => Promise<void>;
 }) => {
   return (
     <>
@@ -72,8 +73,8 @@ const EditAddressModal = ({
             <CancelBtn onClick={onCancel} />
             <AddBtn
               onClick={() => {
-                confirm()
-                onCancel()
+                confirm();
+                onCancel();
               }}
               title="Yes"
             />
@@ -81,8 +82,8 @@ const EditAddressModal = ({
         </Form>
       </Modal>
     </>
-  )
-}
+  );
+};
 
 const AddAddress: React.FC<IMultisigProps> = ({
   addAddress,
@@ -90,254 +91,217 @@ const AddAddress: React.FC<IMultisigProps> = ({
   setAddAddress,
   className,
 }) => {
+  const { account: ownerAddress } = useGlobalIdentityContext();
   const {
     addressBook,
     activeMultisig,
     multisigAddresses,
     setUserDetailsContextState,
-  } = useGlobalUserDetailsContext()
+    identityBackend,
+  } = useGlobalUserDetailsContext();
 
-  const [address, setAddress] = useState<string>(addAddress || "")
-  const [addressValid, setAddressValid] = useState<boolean>(true)
-  const [name, setName] = useState<string>("")
-  const [nickName, setNickName] = useState<string>("")
-  const [showNickNameField, setShowNickNameField] = useState<boolean>(false)
-  const [email, setEmail] = useState<string>("")
-  const [emailValid, setEmailValid] = useState<boolean>(true)
-  const [roles, setRoles] = useState<string[]>([])
-  const [discord, setDiscord] = useState<string>("")
-  const [telegram, setTelegram] = useState<string>("")
-  const [shared, setShared] = useState<boolean>(activeMultisig ? true : false)
+  const [address, setAddress] = useState<string>(addAddress || "");
+  const [addressValid, setAddressValid] = useState<boolean>(true);
+  const [name, setName] = useState<string>("");
+  const [nickName, setNickName] = useState<string>("");
+  const [showNickNameField, setShowNickNameField] = useState<boolean>(false);
+  const [email, setEmail] = useState<string>("");
+  const [emailValid, setEmailValid] = useState<boolean>(true);
+  const [roles, setRoles] = useState<string[]>([]);
+  const [discord, setDiscord] = useState<string>("");
+  const [telegram, setTelegram] = useState<string>("");
+  const [shared, setShared] = useState<boolean>(activeMultisig ? true : false);
 
   const [openConfirmationModal, setOpenConfirmationModal] =
-    useState<boolean>(false)
+    useState<boolean>(false);
 
-  const [loading, setLoading] = useState<boolean>(false)
+  const [loading, setLoading] = useState<boolean>(false);
 
   const {
     setActiveMultisigContextState,
     records,
     roles: defaultRoles,
-  } = useActiveMultisigContext()
+  } = useActiveMultisigContext();
 
   const multisig = multisigAddresses.find(
     (item) => item.address === activeMultisig || item.proxy === activeMultisig,
-  )
+  );
 
   useEffect(() => {
-    setAddressValid(true)
-  }, [address])
+    setAddressValid(true);
+  }, [address]);
 
   useEffect(() => {
     if (email) {
-      const validEmail = EMAIL_REGEX.test(email)
+      const validEmail = EMAIL_REGEX.test(email);
       if (validEmail) {
-        setEmailValid(true)
+        setEmailValid(true);
       } else {
-        setEmailValid(false)
+        setEmailValid(false);
       }
     }
-  }, [email])
+  }, [email]);
 
   const handlePersonalAddressBookUpdate = async () => {
-    if (!address || !name) return
+    if (!address || !name) return;
 
     try {
-      setLoading(true)
-      const userAddress = localStorage.getItem("address")
-      const signature = localStorage.getItem("signature")
+      setLoading(true);
+      if (addressBook.some((item) => item.address === address)) {
+        queueNotification({
+          header: "Address Exists",
+          message: "Please try editing the address.",
+          status: NotificationStatus.ERROR,
+        });
+        setLoading(false);
+        return;
+      }
 
-      if (!userAddress || !signature) {
-        console.log("ERROR")
-        setLoading(false)
-        return
-      } else {
-        if (addressBook.some((item) => item.address === address)) {
-          queueNotification({
-            header: "Address Exists",
-            message: "Please try editing the address.",
-            status: NotificationStatus.ERROR,
-          })
-          setLoading(false)
-          return
+      const { data: addAddressResponse, error: addAddressError } =
+        await identityBackend.addAddressToAddressBook(ownerAddress, {
+          address,
+          discord,
+          email,
+          name,
+          nickName,
+          roles,
+          telegram,
+        });
+      console.log(addAddressResponse, addAddressError);
+
+      const addAddressData = addAddressResponse.addressBook;
+
+      if (addAddressError) {
+        queueNotification({
+          header: "Error!",
+          message: addAddressError,
+          status: NotificationStatus.ERROR,
+        });
+        setLoading(false);
+        return;
+      }
+
+      if (addAddressData) {
+        setUserDetailsContextState((prevState) => {
+          return {
+            ...prevState,
+            addressBook: addAddressData,
+          };
+        });
+
+        queueNotification({
+          header: "Success!",
+          message: "Your address has been added successfully!",
+          status: NotificationStatus.SUCCESS,
+        });
+        setLoading(false);
+        if (onCancel) {
+          onCancel();
+        } else {
+          toggleVisibility();
         }
-
-        const addAddressRes = await fetch(
-          `${FIREBASE_FUNCTIONS_URL}/addToAddressBookEth`,
-          {
-            body: JSON.stringify({
-              address,
-              discord,
-              email,
-              name,
-              nickName,
-              roles,
-              telegram,
-            }),
-            method: "POST",
-          },
-        )
-
-        const { data: addAddressData, error: addAddressError } =
-          (await addAddressRes.json()) as {
-            data: IAddressBookItem[]
-            error: string
-          }
-
-        if (addAddressError) {
-          queueNotification({
-            header: "Error!",
-            message: addAddressError,
-            status: NotificationStatus.ERROR,
-          })
-          setLoading(false)
-          return
-        }
-
-        if (addAddressData) {
-          setUserDetailsContextState((prevState) => {
-            return {
-              ...prevState,
-              addressBook: addAddressData,
-            }
-          })
-
-          queueNotification({
-            header: "Success!",
-            message: "Your address has been added successfully!",
-            status: NotificationStatus.SUCCESS,
-          })
-          setLoading(false)
-          if (onCancel) {
-            onCancel()
-          } else {
-            toggleVisibility()
-          }
-          if (setAddAddress) {
-            setAddAddress("")
-          }
+        if (setAddAddress) {
+          setAddAddress("");
         }
       }
     } catch (error) {
-      console.log("ERROR", error)
-      setLoading(false)
+      console.log("ERROR", error);
+      setLoading(false);
     }
-  }
+  };
 
   const handleSharedAddressBookUpdate = async () => {
-    if (!address || !name) return
+    if (!address || !name) return;
 
     try {
-      setLoading(true)
-      const userAddress = localStorage.getItem("address")
-      const signature = localStorage.getItem("signature")
+      setLoading(true);
 
-      if (!userAddress || !signature) {
-        console.log("ERROR")
-        setLoading(false)
-        return
-      } else {
-        if (records && Object.keys(records).includes(address)) {
-          queueNotification({
-            header: "Address Exists",
-            message: "Please try editing the address.",
-            status: NotificationStatus.ERROR,
-          })
-          setLoading(false)
-          return
+      if (records && Object.keys(records).includes(address)) {
+        queueNotification({
+          header: "Address Exists",
+          message: "Please try editing the address.",
+          status: NotificationStatus.ERROR,
+        });
+        setLoading(false);
+        return;
+      }
+
+      const { data: addAddressData, error: addAddressError } =
+        (await identityBackend.add_address_to_address_book(
+          activeMultisig,
+          address,
+        )) as {
+          data: [string];
+          error: string;
+        };
+
+      if (addAddressError) {
+        queueNotification({
+          header: "Error!",
+          message: addAddressError,
+          status: NotificationStatus.ERROR,
+        });
+        setLoading(false);
+        return;
+      }
+
+      if (addAddressData) {
+        setUserDetailsContextState((prevState) => {
+          return {
+            ...prevState,
+            addressBook: addAddressData.map((a) => ({
+              address: a,
+              name: DEFAULT_ADDRESS_NAME,
+            })),
+          };
+        });
+
+        const copyAddressBook = [...addressBook];
+        const updateIndex = copyAddressBook.findIndex(
+          (item) => item.address === address,
+        );
+        if (updateIndex > -1) {
+          copyAddressBook[updateIndex].nickName = nickName;
+        } else {
+          copyAddressBook.push({
+            address: address,
+            discord,
+            email,
+            name,
+            nickName,
+            roles,
+            telegram,
+          });
         }
+        setUserDetailsContextState((prev) => {
+          return {
+            ...prev,
+            addressBook: copyAddressBook,
+          };
+        });
 
-        const addAddressRes = await fetch(
-          `${FIREBASE_FUNCTIONS_URL}/updateSharedAddressBookEth`,
-          {
-            body: JSON.stringify({
-              address,
-              discord,
-              email,
-              multisigAddress: multisig?.proxy
-                ? multisig.proxy
-                : activeMultisig,
-              name,
-              nickName,
-              roles,
-              telegram,
-            }),
-
-            method: "POST",
-          },
-        )
-
-        const { data: addAddressData, error: addAddressError } =
-          (await addAddressRes.json()) as {
-            data: ISharedAddressBooks
-            error: string
-          }
-
-        if (addAddressError) {
-          queueNotification({
-            header: "Error!",
-            message: addAddressError,
-            status: NotificationStatus.ERROR,
-          })
-          setLoading(false)
-          return
+        queueNotification({
+          header: "Success!",
+          message: "Your address has been added successfully!",
+          status: NotificationStatus.SUCCESS,
+        });
+        setLoading(false);
+        if (onCancel) {
+          onCancel();
+        } else {
+          toggleVisibility();
         }
-
-        if (addAddressData) {
-          setActiveMultisigContextState((prevState) => {
-            return {
-              ...prevState,
-              ...addAddressData,
-            }
-          })
-
-          const copyAddressBook = [...addressBook]
-          const updateIndex = copyAddressBook.findIndex(
-            (item) => item.address === address,
-          )
-          if (updateIndex > -1) {
-            copyAddressBook[updateIndex].nickName = nickName
-          } else {
-            copyAddressBook.push({
-              address: address,
-              discord,
-              email,
-              name,
-              nickName,
-              roles,
-              telegram,
-            })
-          }
-          setUserDetailsContextState((prev) => {
-            return {
-              ...prev,
-              addressBook: copyAddressBook,
-            }
-          })
-
-          queueNotification({
-            header: "Success!",
-            message: "Your address has been added successfully!",
-            status: NotificationStatus.SUCCESS,
-          })
-          setLoading(false)
-          if (onCancel) {
-            onCancel()
-          } else {
-            toggleVisibility()
-          }
-          if (setAddAddress) {
-            setAddAddress("")
-          }
+        if (setAddAddress) {
+          setAddAddress("");
         }
       }
     } catch (error) {
-      console.log("ERROR", error)
-      setLoading(false)
+      console.log("ERROR", error);
+      setLoading(false);
     }
-  }
+  };
 
-  const { toggleVisibility } = useModalContext()
+  const { toggleVisibility } = useModalContext();
   return (
     <>
       <Spin
@@ -434,8 +398,8 @@ const AddAddress: React.FC<IMultisigProps> = ({
                 />
                 <Button
                   onClick={() => {
-                    setShowNickNameField(false)
-                    setNickName("")
+                    setShowNickNameField(false);
+                    setNickName("");
                   }}
                   icon={<MinusCircleOutlined className="text-primary" />}
                   className="bg-transparent p-0 border-none outline-none text-primary text-sm flex items-center"
@@ -574,8 +538,8 @@ const AddAddress: React.FC<IMultisigProps> = ({
         </div>
       </Spin>
     </>
-  )
-}
+  );
+};
 
 export default styled(AddAddress)`
   .ant-select-selector {
@@ -605,4 +569,4 @@ export default styled(AddAddress)`
     color: white !important;
     margin-inline-end: 10px !important;
   }
-`
+`;

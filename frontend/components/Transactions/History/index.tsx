@@ -2,69 +2,75 @@
 // This software may be modified and distributed under the terms
 // of the Apache-2.0 license. See the LICENSE file for details.
 
-import dayjs from "dayjs"
-import React, { useEffect, useState } from "react"
-import { FC } from "react"
-import { useLocation } from "react-router-dom"
-import { useGlobalUserDetailsContext } from "@frontend/context/UserDetailsContext"
-import { usePagination } from "@frontend/hooks/usePagination"
-import Loader from "@frontend/ui-components/Loader"
-import Pagination from "@frontend/ui-components/Pagination"
-import { convertSafeHistoryData } from "@frontend/utils/convertSafeData/convertSafeHistory"
-import updateDB, { UpdateDB } from "@frontend/utils/updateDB"
+import dayjs from "dayjs";
+import React, { useEffect, useState } from "react";
+import { FC } from "react";
+import { useLocation } from "react-router-dom";
+import { useGlobalUserDetailsContext } from "@frontend/context/UserDetailsContext";
+import { usePagination } from "@frontend/hooks/usePagination";
+import Loader from "@frontend/ui-components/Loader";
+import Pagination from "@frontend/ui-components/Pagination";
+import { convertSafeHistoryData } from "@frontend/utils/convertSafeData/convertSafeHistory";
+import updateDB, { UpdateDB } from "@frontend/utils/updateDB";
 
-import NoTransactionsHistory from "./NoTransactionsHistory"
-import Transaction from "./Transaction"
+import NoTransactionsHistory from "./NoTransactionsHistory";
+import Transaction from "./Transaction";
 
 interface IHistory {
-  loading: boolean
-  setLoading: React.Dispatch<React.SetStateAction<boolean>>
-  refetch: boolean
+  loading: boolean;
+  setLoading: React.Dispatch<React.SetStateAction<boolean>>;
+  refetch: boolean;
 }
 
 const History: FC<IHistory> = ({ loading, setLoading, refetch }) => {
-  const location = useLocation()
-  const { currentPage, setPage, totalDocs } = usePagination()
-  const [transactions, setTransactions] = useState<any[]>([])
-  const { activeMultisig, identityBackend } = useGlobalUserDetailsContext()
-  const { address } = useGlobalUserDetailsContext()
+  const location = useLocation();
+  const { currentPage, setPage, totalDocs } = usePagination();
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const { activeMultisig, identityBackend } = useGlobalUserDetailsContext();
+  const { address } = useGlobalUserDetailsContext();
 
   useEffect(() => {
-    const hash = location.hash.slice(1)
-    const elem = document.getElementById(hash)
+    const hash = location.hash.slice(1);
+    const elem = document.getElementById(hash);
     if (elem) {
-      elem.scrollIntoView({ behavior: "smooth", block: "start" })
+      elem.scrollIntoView({ behavior: "smooth", block: "start" });
     }
-  }, [location.hash, transactions])
+  }, [location.hash, transactions]);
 
   useEffect(() => {
     if (!identityBackend) {
-      return
+      return;
     }
-    ;(async () => {
-      setLoading(true)
+    (async () => {
+      setLoading(true);
       try {
         const identityData = (
           await identityBackend.getTransactionHistory(activeMultisig)
-        ).data
-        console.log(identityData)
-        const convertedData = identityData.data
-        setTransactions(convertedData)
+        ).data;
+        console.log(identityData);
+        const convertedData = identityData.data;
+        setTransactions(convertedData);
+        // updateDB(
+        //   UpdateDB.Update_History_Transaction,
+        //   { transactions: convertedData },
+        //   address,
+        //   network
+        // );
       } catch (error) {
-        console.log(error)
+        console.log(error);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    })()
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeMultisig, address, refetch, identityBackend])
+  }, [activeMultisig, address, refetch, identityBackend]);
 
   if (loading) {
     return (
       <div className="h-full">
         <Loader size="large" />
       </div>
-    )
+    );
   }
 
   return (
@@ -89,7 +95,7 @@ const History: FC<IHistory> = ({ loading, setLoading, refetch }) => {
                     {...transaction}
                   />
                 </section>
-              )
+              );
             })}
         </div>
       ) : (
@@ -107,7 +113,7 @@ const History: FC<IHistory> = ({ loading, setLoading, refetch }) => {
         </div>
       )}
     </>
-  )
-}
+  );
+};
 
-export default History
+export default History;

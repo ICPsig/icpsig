@@ -2,27 +2,27 @@
 // This software may be modified and distributed under the terms
 // of the Apache-2.0 license. See the LICENSE file for details.
 
-import { SwapOutlined } from "@ant-design/icons"
-import { Badge, Tooltip } from "antd"
-import React, { useEffect, useState } from "react"
-import { useGlobalUserDetailsContext } from "@frontend/context/UserDetailsContext"
-import useGetWalletAccounts from "../../hooks/useGetWalletAccounts"
-import { IAddressBookItem } from "@frontend/types"
-import { WarningCircleIcon } from "@frontend/ui-components/CustomIcons"
-import shortenAddress from "../../utils/shortenAddress"
+import { SwapOutlined } from "@ant-design/icons";
+import { Badge, Tooltip } from "antd";
+import React, { useEffect, useState } from "react";
+import { useGlobalUserDetailsContext } from "@frontend/context/UserDetailsContext";
+import useGetWalletAccounts from "../../hooks/useGetWalletAccounts";
+import { IAddressBookItem } from "@frontend/types";
+import { WarningCircleIcon } from "@frontend/ui-components/CustomIcons";
+import shortenAddress from "../../utils/shortenAddress";
 
 interface ISignature {
-  name: string
-  address: string
-  key: number
-  balance?: string
+  name: string;
+  address: string;
+  key: number;
+  balance?: string;
 }
 
 interface ISignatoryProps {
-  setSignatories: React.Dispatch<React.SetStateAction<string[]>>
-  signatories: string[]
-  filterAddress?: string
-  homepage: boolean
+  setSignatories: React.Dispatch<React.SetStateAction<string[]>>;
+  signatories: string[];
+  filterAddress?: string;
+  homepage: boolean;
 }
 
 const Signatory = ({
@@ -31,11 +31,11 @@ const Signatory = ({
   signatories,
   homepage,
 }: ISignatoryProps) => {
-  const { address, addressBook } = useGlobalUserDetailsContext()
+  const { address, addressBook } = useGlobalUserDetailsContext();
 
-  const [addresses, setAddresses] = useState<ISignature[]>([])
+  const [addresses, setAddresses] = useState<ISignature[]>([]);
 
-  const walletAccounts = useGetWalletAccounts()
+  const walletAccounts = useGetWalletAccounts();
 
   useEffect(() => {
     setAddresses(
@@ -53,120 +53,132 @@ const Signatory = ({
           key: i + 1,
           name: item.name,
         })),
-    )
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [addressBook])
+  }, [addressBook]);
 
   useEffect(() => {
     const fetchBalances = async () => {
       const results = (await Promise.allSettled(
         addresses.map((item) => item),
-      )) as any
+      )) as any;
       results.forEach((result: any, i: any) => {
         if (result.status === "fulfilled") {
-          const balance = result.value
+          const balance = result.value;
           setAddresses((prev) => {
-            const copyPrev = [...prev]
-            const copyObj = copyPrev[i]
-            copyObj!.balance = balance?.data?.free?.toString()
-            return copyPrev
-          })
+            const copyPrev = [...prev];
+            const copyObj = copyPrev[i];
+            copyObj!.balance = balance?.data?.free?.toString();
+            return copyPrev;
+          });
         }
-      })
-    }
-    fetchBalances()
+      });
+    };
+    fetchBalances();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [addressBook])
+  }, [addressBook]);
 
   const dragStart = (event: any) => {
-    event.dataTransfer.setData("text", event.target.id)
-  }
+    event.dataTransfer.setData("text", event.target.id);
+  };
 
   const dragOver = (event: any) => {
-    event.preventDefault()
-  }
+    event.preventDefault();
+  };
 
   const drop = (event: any) => {
-    event.preventDefault()
-    const data = event.dataTransfer.getData("text")
-    const address = `${data}`.split("-")[1]
+    event.preventDefault();
+    const data = event.dataTransfer.getData("text");
+    const address = data;
 
-    if (!address) return //is invalid
+    if (!address) return; //is invalid
 
     setSignatories((prevState) => {
-      if (prevState.includes(address)) {
-        return prevState
-      } else {
-        return [...prevState, address]
+      if (!prevState) {
+        return [];
       }
-    })
+      if (prevState.includes(address)) {
+        return prevState;
+      } else {
+        return [...prevState, address];
+      }
+    });
 
-    const drop2 = document.getElementById(`drop2${homepage && "-home"}`)
+    const drop2 = document.getElementById(`drop2${homepage && "-home"}`);
     if (data) {
-      drop2?.appendChild(document.getElementById(data)!)
+      drop2?.appendChild(document.getElementById(data)!);
     }
-  }
+  };
 
   const dropReturn = (event: any) => {
-    event.preventDefault()
-    const data = event.dataTransfer.getData("text")
-    const address = `${data}`.split("-")[1]
+    event.preventDefault();
+    const data = event.dataTransfer.getData("text");
+    const address = data;
 
-    if (!address) return //is invalid
+    if (!address) return; //is invalid
 
     if (signatories.includes(address)) {
       setSignatories((prevState) => {
-        const copyState = [...prevState]
-        const index = copyState.indexOf(address)
-        copyState.splice(index, 1)
-        return copyState
-      })
+        if (!prevState) {
+          return [];
+        }
+        const copyState = [...prevState];
+        const index = copyState.indexOf(address);
+        copyState.splice(index, 1);
+        return copyState;
+      });
     }
-    const drop1 = document.getElementById(`drop1${homepage && "-home"}`)
+    const drop1 = document.getElementById(`drop1${homepage && "-home"}`);
     if (data) {
-      drop1?.appendChild(document.getElementById(data)!)
+      drop1?.appendChild(document.getElementById(data)!);
     }
-  }
+  };
 
   const clickDropReturn = (event: any) => {
-    event.preventDefault()
-    const data = event.target.id
-    const address = `${data}`.split("-")[1]
+    event.preventDefault();
+    const data = event.target.id;
+    const address = data;
 
-    if (!address) return //is invalid
+    if (!address) return; //is invalid
 
     if (signatories.includes(address)) {
       setSignatories((prevState) => {
-        const copyState = [...prevState]
-        const index = copyState.indexOf(address)
-        copyState.splice(index, 1)
-        return copyState
-      })
+        if (!prevState) {
+          return [];
+        }
+        const copyState = [...prevState];
+        const index = copyState.indexOf(address);
+        copyState.splice(index, 1);
+        return copyState;
+      });
     }
-    const drop1 = document.getElementById(`drop1${homepage && "-home"}`)
+    const drop1 = document.getElementById(`drop1${homepage && "-home"}`);
     if (data) {
-      drop1?.appendChild(document.getElementById(data)!)
+      drop1?.appendChild(document.getElementById(data)!);
     }
-  }
+  };
 
   const clickDrop = async (event: any) => {
-    event.preventDefault()
-    const data = event.target.id
-    const address = `${data}`.split("-")[1]
+    event.preventDefault();
+    const data = event.target.id;
+    const address = data;
 
     setSignatories((prevState) => {
-      if (prevState.includes(address)) {
-        return prevState
-      } else {
-        return [...prevState, address]
+      if (!prevState) {
+        return [];
       }
-    })
+      if (prevState.includes(address)) {
+        return prevState;
+      } else {
+        return [...prevState, address];
+      }
+    });
 
-    const drop2 = document.getElementById(`drop2${homepage && "-home"}`)
+    const drop2 = document.getElementById(`drop2${homepage && "-home"}`);
     if (data) {
-      drop2?.appendChild(document.getElementById(data)!)
+      drop2?.appendChild(document.getElementById(data)!);
     }
-  }
+  };
 
   return (
     <div className="flex w-[45vw]">
@@ -185,7 +197,7 @@ const Signatory = ({
             {addresses.length > 0 ? (
               addresses.map((address) => {
                 const lowBalance =
-                  address.balance && Number(address.balance) === 0
+                  address.balance && Number(address.balance) === 0;
                 return (
                   <p
                     onClick={
@@ -229,7 +241,7 @@ const Signatory = ({
                       </Tooltip>
                     )}
                   </p>
-                )
+                );
               })
             ) : (
               // <Tooltip title='Import Addresses From Your Wallet.'>
@@ -294,7 +306,7 @@ const Signatory = ({
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default Signatory
+export default Signatory;

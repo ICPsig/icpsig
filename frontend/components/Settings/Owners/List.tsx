@@ -1,25 +1,25 @@
 // Copyright 2022-2023 @Polkasafe/polkaSafe-ui authors & contributors
 // This software may be modified and distributed under the terms
 // of the Apache-2.0 license. See the LICENSE file for details.
-import { Button, Divider, Modal } from "antd"
-import React, { useState } from "react"
-import EditAddress from "@frontend/components/AddressBook/Edit"
-import { useActiveMultisigContext } from "@frontend/context/ActiveMultisigContext"
-import { useGlobalUserDetailsContext } from "@frontend/context/UserDetailsContext"
-import { DEFAULT_ADDRESS_NAME } from "@frontend/global/default"
+import { Button, Divider, Modal } from "antd";
+import React, { useState } from "react";
+import EditAddress from "@frontend/components/AddressBook/Edit";
+import { useActiveMultisigContext } from "@frontend/context/ActiveMultisigContext";
+import { useGlobalUserDetailsContext } from "@frontend/context/UserDetailsContext";
+import { DEFAULT_ADDRESS_NAME } from "@frontend/global/default";
 import {
   CopyIcon,
   DeleteIcon,
   EditIcon,
   ExternalLinkIcon,
   OutlineCloseIcon,
-} from "@frontend/ui-components/CustomIcons"
-import copyText from "@frontend/utils/copyText"
-import shortenAddress from "@frontend/utils/shortenAddress"
-import styled from "styled-components"
+} from "@frontend/ui-components/CustomIcons";
+import copyText from "@frontend/utils/copyText";
+import shortenAddress from "@frontend/utils/shortenAddress";
+import styled from "styled-components";
 
-import RemoveOwner from "./Remove"
-import Avatar from "@frontend/components/Avatar/Avatar"
+import RemoveOwner from "./Remove";
+import Avatar from "@frontend/components/Avatar/Avatar";
 
 const RemoveSignatoryModal = ({
   address,
@@ -27,13 +27,13 @@ const RemoveSignatoryModal = ({
   signatoriesLength,
   threshold,
 }: {
-  address: string
-  className?: string
-  signatoriesLength: number
-  threshold: number
+  address: string;
+  className?: string;
+  signatoriesLength: number;
+  threshold: number;
 }) => {
   const [openRemoveSignatoryModal, setOpenRemoveSignatoryModal] =
-    useState(false)
+    useState(false);
   return (
     <>
       <Button
@@ -69,8 +69,8 @@ const RemoveSignatoryModal = ({
         />
       </Modal>
     </>
-  )
-}
+  );
+};
 
 const EditAddressModal = ({
   className,
@@ -82,16 +82,16 @@ const EditAddressModal = ({
   rolesToEdit,
   nickNameToEdit,
 }: {
-  className?: string
-  nickNameToEdit?: string
-  addressToEdit: string
-  nameToEdit?: string
-  discordToEdit?: string
-  emailToEdit?: string
-  telegramToEdit?: string
-  rolesToEdit?: string[]
+  className?: string;
+  nickNameToEdit?: string;
+  addressToEdit: string;
+  nameToEdit?: string;
+  discordToEdit?: string;
+  emailToEdit?: string;
+  telegramToEdit?: string;
+  rolesToEdit?: string[];
 }) => {
-  const [openEditModal, setOpenEditModal] = useState<boolean>(false)
+  const [openEditModal, setOpenEditModal] = useState<boolean>(false);
   return (
     <>
       <Button
@@ -133,15 +133,15 @@ const EditAddressModal = ({
         />
       </Modal>
     </>
-  )
-}
+  );
+};
 
 const ListOwners = ({
   className,
   disabled,
 }: {
-  className?: string
-  disabled?: boolean
+  className?: string;
+  disabled?: boolean;
 }) => {
   const {
     multisigAddresses,
@@ -149,15 +149,15 @@ const ListOwners = ({
     addressBook,
     address: userAddress,
     activeMultisigData,
-  } = useGlobalUserDetailsContext()
+  } = useGlobalUserDetailsContext();
   const multisig = multisigAddresses?.find(
     (item: any) => item.address === activeMultisig,
-  )
-  const signatories = activeMultisigData?.signatories || multisig?.signatories
+  );
+  const signatories = activeMultisigData?.signatories || multisig?.signatories;
   const userAddressObject = addressBook.find(
     (item) => item.address === userAddress,
-  )
-  const { records } = useActiveMultisigContext()
+  );
+  const { records } = useActiveMultisigContext();
 
   return (
     <div className="text-sm font-medium leading-[15px] ">
@@ -173,7 +173,7 @@ const ListOwners = ({
               ?.name || DEFAULT_ADDRESS_NAME}
           </p>
           <div className="col-span-2 flex items-center">
-            <Avatar account={userAddress} size={6} />
+            <Avatar address={userAddress} size={6} />
             <span
               title={userAddress}
               className="hidden sm:block ml-[6px] max-w-md text-ellipsis overflow-hidden"
@@ -216,8 +216,8 @@ const ListOwners = ({
         .map((address: any, index: any) => {
           const addressObject = addressBook.find(
             (item) => item.address === address,
-          )
-          const encodedAddress = address
+          );
+          const encodedAddress = address;
           return (
             <article key={index}>
               <div className="grid grid-cols-4 gap-x-5 py-6 px-4 text-white">
@@ -228,7 +228,7 @@ const ListOwners = ({
                     DEFAULT_ADDRESS_NAME}
                 </p>
                 <div className="col-span-2 flex items-center">
-                  <Avatar account={encodedAddress} size={6} />
+                  <Avatar address={encodedAddress} size={6} />
                   <span
                     title={encodedAddress || address}
                     className="hidden sm:block ml-[6px] max-w-md text-ellipsis overflow-hidden"
@@ -276,11 +276,11 @@ const ListOwners = ({
                 <Divider className="bg-text_secondary my-0" />
               ) : null}
             </article>
-          )
+          );
         })}
     </div>
-  )
-}
+  );
+};
 
 export default styled(ListOwners)`
   .ant-spin-nested-loading .ant-spin-blur {
@@ -289,4 +289,4 @@ export default styled(ListOwners)`
   .ant-spin-nested-loading .ant-spin-blur::after {
     opacity: 1 !important;
   }
-`
+`;

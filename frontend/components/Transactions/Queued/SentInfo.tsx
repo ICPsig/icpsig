@@ -1,17 +1,17 @@
 // Copyright 2022-2023 @Polkasafe/polkaSafe-ui authors & contributors
 // This software may be modified and distributed under the terms
 // of the Apache-2.0 license. See the LICENSE file for details.
-import { Button, Collapse, Divider, Modal, Spin, Timeline } from "antd"
-import classNames from "classnames"
-import dayjs from "dayjs"
-import React, { FC, useEffect, useState } from "react"
-import CancelBtn from "@frontend/components/Multisig/CancelBtn"
-import RemoveBtn from "@frontend/components/Settings/RemoveBtn"
-import { useModalContext } from "@frontend/context/ModalContext"
-import { useGlobalUserDetailsContext } from "@frontend/context/UserDetailsContext"
-import { chainProperties } from "@frontend/global/networkConstants"
-import { ITxNotification } from "@frontend/types"
-import AddressComponent from "@frontend/ui-components/AddressComponent"
+import { Button, Collapse, Divider, Modal, Spin, Timeline } from "antd";
+import classNames from "classnames";
+import dayjs from "dayjs";
+import React, { FC, useEffect, useState } from "react";
+import CancelBtn from "@frontend/components/Multisig/CancelBtn";
+import RemoveBtn from "@frontend/components/Settings/RemoveBtn";
+import { useModalContext } from "@frontend/context/ModalContext";
+import { useGlobalUserDetailsContext } from "@frontend/context/UserDetailsContext";
+import { chainProperties } from "@frontend/global/networkConstants";
+import { ITxNotification } from "@frontend/types";
+import AddressComponent from "@frontend/ui-components/AddressComponent";
 import {
   ArrowRightIcon,
   CircleCheckIcon,
@@ -20,40 +20,40 @@ import {
   CopyIcon,
   EditIcon,
   OutlineCloseIcon,
-} from "@frontend/ui-components/CustomIcons"
-import copyText from "@frontend/utils/copyText"
-import shortenAddress from "@frontend/utils/shortenAddress"
-import styled from "styled-components"
+} from "@frontend/ui-components/CustomIcons";
+import copyText from "@frontend/utils/copyText";
+import shortenAddress from "@frontend/utils/shortenAddress";
+import styled from "styled-components";
 
 interface ISentInfoProps {
-  amount: string | string[]
+  amount: string | string[];
   transactionFields?: {
-    category: string
-    subfields: { [subfield: string]: { name: string; value: string } }
-  }
-  date: Date
+    category: string;
+    subfields: { [subfield: string]: { name: string; value: string } };
+  };
+  date: Date;
   // time: string;
-  loading: boolean
-  addressAddOrRemove?: string
-  approvals: string[]
-  threshold: number
-  className?: string
-  callHash: string
-  callData: string
-  callDataString: string
-  recipientAddress?: string | string[]
-  setCallDataString: React.Dispatch<React.SetStateAction<string>>
-  handleApproveTransaction: () => Promise<void>
-  handleCancelTransaction: () => Promise<void>
-  note: string
-  isProxyApproval: boolean
-  isProxyAddApproval: boolean
-  delegate_id?: string
-  isProxyRemovalApproval?: boolean
-  notifications?: ITxNotification
-  getMultiDataLoading?: boolean
-  txType?: string
-  transactionDetailsLoading: boolean
+  loading: boolean;
+  addressAddOrRemove?: string;
+  approvals: string[];
+  threshold: number;
+  className?: string;
+  callHash: string;
+  callData: string;
+  callDataString: string;
+  recipientAddress?: string | string[];
+  setCallDataString: React.Dispatch<React.SetStateAction<string>>;
+  handleApproveTransaction: () => Promise<void>;
+  handleCancelTransaction: () => Promise<void>;
+  note: string;
+  isProxyApproval: boolean;
+  isProxyAddApproval: boolean;
+  delegate_id?: string;
+  isProxyRemovalApproval?: boolean;
+  notifications?: ITxNotification;
+  getMultiDataLoading?: boolean;
+  txType?: string;
+  transactionDetailsLoading: boolean;
 }
 
 const SentInfo: FC<ISentInfoProps> = ({
@@ -79,21 +79,21 @@ const SentInfo: FC<ISentInfoProps> = ({
     address: userAddress,
     multisigAddresses,
     activeMultisig,
-  } = useGlobalUserDetailsContext()
-  const [showDetails, setShowDetails] = useState<boolean>(false)
-  const [openCancelModal, setOpenCancelModal] = useState<boolean>(false)
-  const [updatedNote, setUpdatedNote] = useState(note)
-  const { openModal } = useModalContext()
+  } = useGlobalUserDetailsContext();
+  const [showDetails, setShowDetails] = useState<boolean>(false);
+  const [openCancelModal, setOpenCancelModal] = useState<boolean>(false);
+  const [updatedNote, setUpdatedNote] = useState(note);
+  const { openModal } = useModalContext();
 
   useEffect(() => {
-    setUpdatedNote(note)
-  }, [note])
+    setUpdatedNote(note);
+  }, [note]);
 
-  const depositor = approvals[0]
+  const depositor = approvals[0];
 
   const activeMultisigObject = multisigAddresses?.find(
     (item: any) => item.address === activeMultisig,
-  )
+  );
 
   const CancelTransaction: FC = () => {
     return (
@@ -126,15 +126,15 @@ const SentInfo: FC<ISentInfoProps> = ({
               title="Yes, Cancel"
               loading={loading}
               onClick={() => {
-                handleCancelTransaction()
-                setOpenCancelModal(false)
+                handleCancelTransaction();
+                setOpenCancelModal(false);
               }}
             />
           </div>
         </div>
       </Modal>
-    )
-  }
+    );
+  };
 
   return (
     <div className={classNames("flex gap-x-4", className)}>
@@ -205,44 +205,6 @@ const SentInfo: FC<ISentInfoProps> = ({
               <AddressComponent address={addressAddOrRemove} />
             </p>
           </div>
-        )}
-        {transactionDetailsLoading ? (
-          <Spin className="mt-3" />
-        ) : (
-          <>
-            {!!transactionFields &&
-              Object.keys(transactionFields).length !== 0 &&
-              transactionFields.category !== "none" && (
-                <>
-                  <div className="flex items-center justify-between mt-3">
-                    <span className="text-text_secondary font-normal text-sm leading-[15px]">
-                      Category:
-                    </span>
-                    <span className="text-primary border border-solid border-primary rounded-xl px-[6px] py-1">
-                      {transactionFields?.category}
-                    </span>
-                  </div>
-                  {transactionFields &&
-                    transactionFields.subfields &&
-                    Object.keys(transactionFields?.subfields).map((key) => {
-                      const subfield = transactionFields.subfields[key]
-                      return (
-                        <div
-                          key={key}
-                          className="flex items-center justify-between mt-3"
-                        >
-                          <span className="text-text_secondary font-normal text-sm leading-[15px]">
-                            {subfield.name}:
-                          </span>
-                          <span className="text-waiting bg-waiting bg-opacity-5 border border-solid border-waiting rounded-lg px-[6px] py-[3px]">
-                            {subfield.value}
-                          </span>
-                        </div>
-                      )
-                    })}
-                </>
-              )}
-          </>
         )}
         {showDetails && (
           <>
@@ -413,7 +375,7 @@ const SentInfo: FC<ISentInfoProps> = ({
                               <AddressComponent address={address} />
                             </div>
                           </Timeline.Item>
-                        )
+                        );
                       })}
                   </Timeline>
                 </Collapse.Panel>
@@ -460,8 +422,8 @@ const SentInfo: FC<ISentInfoProps> = ({
         </div>
       </article>
     </div>
-  )
-}
+  );
+};
 
 export default styled(SentInfo)`
   .ant-collapse > .ant-collapse-item > .ant-collapse-header {
@@ -489,7 +451,7 @@ export default styled(SentInfo)`
   .warning .ant-timeline-item-tail {
     border-inline-color: #ff9f1c;
   }
-`
+`;
 
 // signin message hash
 // linking via all address - no user input of safe address

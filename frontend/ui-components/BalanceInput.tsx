@@ -2,19 +2,20 @@
 // This software may be modified and distributed under the terms
 // of the Apache-2.0 license. See the LICENSE file for details.
 
-import { Dropdown, Form, Input } from "antd"
-import { ItemType } from "antd/lib/menu/hooks/useItems"
-import React, { useState } from "react"
-import { tokens } from "@frontend/global/networkConstants"
-import { CircleArrowDownIcon } from "./CustomIcons"
+import { Dropdown, Form, Input } from "antd";
+import { ItemType } from "antd/lib/menu/hooks/useItems";
+import React, { useState } from "react";
+import { tokens } from "@frontend/global/networkConstants";
+import { CircleArrowDownIcon } from "./CustomIcons";
 
 interface Props {
-  className?: string
-  label?: string
-  fromBalance?: string
-  onChange: (balance: string) => void
-  placeholder?: string
-  defaultValue?: string
+  className?: string;
+  label?: string;
+  fromBalance?: string;
+  onChange: (balance: string) => void;
+  setToken?: React.Dispatch<React.SetStateAction<string>>;
+  placeholder?: string;
+  defaultValue?: string;
 }
 
 export const ParachainIcon = ({
@@ -22,9 +23,9 @@ export const ParachainIcon = ({
   className,
   size = 20,
 }: {
-  src: string
-  className?: string
-  size?: number
+  src: string;
+  className?: string;
+  size?: number;
 }) => {
   return (
     <img
@@ -34,8 +35,8 @@ export const ParachainIcon = ({
       src={src}
       alt="Chain logo"
     />
-  )
-}
+  );
+};
 
 const BalanceInput = ({
   className,
@@ -43,8 +44,9 @@ const BalanceInput = ({
   onChange,
   placeholder = "",
   defaultValue = "",
+  setToken,
 }: Props) => {
-  const [selectedToken, setSelectedToken] = useState<string>(tokens[0].name)
+  const [selectedToken, setSelectedToken] = useState<string>(tokens[0].name);
 
   const currencyOptions: ItemType[] = tokens.map((token) => ({
     key: token.name,
@@ -54,7 +56,7 @@ const BalanceInput = ({
         {token.symbol}
       </span>
     ) as any,
-  }))
+  }));
 
   return (
     <section className={`${className}`}>
@@ -81,7 +83,10 @@ const BalanceInput = ({
                 className={className}
                 menu={{
                   items: currencyOptions,
-                  onClick: (e) => setSelectedToken(e.key),
+                  onClick: (e) => {
+                    setSelectedToken(e.key);
+                    setToken?.(e.key);
+                  },
                 }}
               >
                 <div className="absolute right-0 flex gap-x-1 cursor-pointer items-center justify-center pr-3 text-white">
@@ -100,7 +105,7 @@ const BalanceInput = ({
         </article>
       </div>
     </section>
-  )
-}
+  );
+};
 
-export default BalanceInput
+export default BalanceInput;

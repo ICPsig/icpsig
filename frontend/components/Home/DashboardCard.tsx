@@ -2,36 +2,37 @@
 // This software may be modified and distributed under the terms
 // of the Apache-2.0 license. See the LICENSE file for details.
 
-import { PlusCircleOutlined } from "@ant-design/icons"
-import { Modal } from "antd"
-import { Spin } from "antd"
-import React, { FC, useState } from "react"
-import astarLogo from "@frontend/assets/astar-logo.png"
-import { useModalContext } from "@frontend/context/ModalContext"
-import { useGlobalUserDetailsContext } from "@frontend/context/UserDetailsContext"
+import { PlusCircleOutlined } from "@ant-design/icons";
+import { Modal } from "antd";
+import { Spin } from "antd";
+import React, { FC, useState } from "react";
+import astarLogo from "@frontend/assets/icp-logo.png";
+import { useModalContext } from "@frontend/context/ModalContext";
+import { useGlobalUserDetailsContext } from "@frontend/context/UserDetailsContext";
 // import AddressQr from "@frontend/ui-components/AddressQr";
 import {
   CopyIcon,
   OutlineCloseIcon,
   QRIcon,
-} from "@frontend/ui-components/CustomIcons"
-import PrimaryButton from "@frontend/ui-components/PrimaryButton"
-import copyText from "@frontend/utils/copyText"
-import shortenAddress from "@frontend/utils/shortenAddress"
-import styled from "styled-components"
+} from "@frontend/ui-components/CustomIcons";
+import PrimaryButton from "@frontend/ui-components/PrimaryButton";
+import copyText from "@frontend/utils/copyText";
+import shortenAddress from "@frontend/utils/shortenAddress";
+import styled from "styled-components";
 
-import FundMultisig from "../SendFunds/FundMultisig"
-import SendFundsForm from "../SendFunds/SendFundsForm"
-import Avatar from "../Avatar/Avatar"
+import FundMultisig from "../SendFunds/FundMultisig";
+import SendFundsForm from "../SendFunds/SendFundsForm";
+import Avatar from "../Avatar/Avatar";
+import { mainBalance } from "@frontend/ui-components/Balance";
 
 interface IDashboardCard {
-  className?: string
-  hasProxy: boolean
-  setNewTxn: React.Dispatch<React.SetStateAction<boolean>>
-  transactionLoading: boolean
-  openTransactionModal: boolean
-  setOpenTransactionModal: React.Dispatch<React.SetStateAction<boolean>>
-  isOnchain: boolean
+  className?: string;
+  hasProxy: boolean;
+  setNewTxn: React.Dispatch<React.SetStateAction<boolean>>;
+  transactionLoading: boolean;
+  openTransactionModal: boolean;
+  setOpenTransactionModal: React.Dispatch<React.SetStateAction<boolean>>;
+  isOnchain: boolean;
 }
 
 const DashboardCard = ({
@@ -42,19 +43,20 @@ const DashboardCard = ({
   setOpenTransactionModal,
 }: IDashboardCard) => {
   const { activeMultisig, multisigAddresses, activeMultisigData } =
-    useGlobalUserDetailsContext()
-  const { openModal } = useModalContext()
+    useGlobalUserDetailsContext();
+  const { openModal } = useModalContext();
 
   const getMultisigVault = (address: string) => {
-    console.log("Address Balance: file DashboardCard", address)
-    return 1
-  }
+    console.log("Address Balance: file DashboardCard", address);
+    return 1;
+  };
 
-  const [openFundMultisigModal, setOpenFundMultisigModal] = useState(false)
+  const [openFundMultisigModal, setOpenFundMultisigModal] = useState(false);
   const currentMultisig = multisigAddresses?.find(
     (item) => item.address === activeMultisig,
-  )
-  const balance = getMultisigVault(currentMultisig?.address || "")
+  );
+  const balance = getMultisigVault(currentMultisig?.address || "");
+  console.log(activeMultisig);
   const TransactionModal: FC = () => {
     return (
       <>
@@ -73,8 +75,8 @@ const DashboardCard = ({
             <button
               className="outline-none border-none bg-highlight w-6 h-6 rounded-full flex items-center justify-center z-100"
               onClick={() => {
-                setOpenTransactionModal(false)
-                setNewTxn((prev) => !prev)
+                setOpenTransactionModal(false);
+                setNewTxn((prev) => !prev);
               }}
             >
               <OutlineCloseIcon className="text-primary w-2 h-2" />
@@ -94,8 +96,8 @@ const DashboardCard = ({
           />
         </Modal>
       </>
-    )
-  }
+    );
+  };
 
   const FundMultisigModal: FC = () => {
     return (
@@ -120,7 +122,7 @@ const DashboardCard = ({
             </button>
           }
           title={
-            <h3 className="text-white mb-8 text-lg font-semibold">
+            <h3 className="text-white mb-2 text-lg font-semibold">
               Fund Multisig
             </h3>
           }
@@ -133,8 +135,8 @@ const DashboardCard = ({
           />
         </Modal>
       </>
-    )
-  }
+    );
+  };
 
   return (
     <>
@@ -153,7 +155,7 @@ const DashboardCard = ({
           <div className="flex gap-x-3 items-center">
             <div className="relative">
               <div className="border-2 border-primary p-1.5 rounded-full flex justify-center items-center">
-                <Avatar account={currentMultisig?.address || ""} size={10} />
+                <Avatar address={currentMultisig?.address || ""} size={50} />
               </div>
               <div
                 className={
@@ -200,13 +202,9 @@ const DashboardCard = ({
             </div>
           </div>
           <div>
-            <div className="text-white">ASTR</div>
+            <div className="text-white">ICP</div>
             <div className="font-bold text-lg text-primary">
-              {!activeMultisigData?.safeBalance ? (
-                <Spin size="default" />
-              ) : (
-                <>{balance}</>
-              )}
+              <>{mainBalance?.[activeMultisig] || 0}</>
             </div>
           </div>
         </div>
@@ -216,8 +214,8 @@ const DashboardCard = ({
         </div>
       </div>
     </>
-  )
-}
+  );
+};
 
 export default styled(DashboardCard)`
   .ant-spin-nested-loading .ant-spin-blur {
@@ -226,4 +224,4 @@ export default styled(DashboardCard)`
   .ant-spin-nested-loading .ant-spin-blur::after {
     opacity: 1 !important;
   }
-`
+`;

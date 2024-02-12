@@ -1,21 +1,21 @@
 // Copyright 2022-2023 @Polkasafe/polkaSafe-ui authors & contributors
 // This software may be modified and distributed under the terms
 // of the Apache-2.0 license. See the LICENSE file for details.
-import { Button, Form, Spin, Tooltip } from "antd"
-import React, { useState } from "react"
-import AddMultisigSVG from "@frontend/assets/add-multisig.svg"
-import FailedTransactionLottie from "@frontend/ui-components/lottie-graphics/FailedTransaction"
-import LoadingLottie from "@frontend/ui-components/lottie-graphics/Loading"
-import RemoveMultisigSVG from "@frontend/assets/remove-multisig.svg"
-import CancelBtn from "@frontend/components/Settings/CancelBtn"
-import RemoveBtn from "@frontend/components/Settings/RemoveBtn"
-import Loader from "@frontend/components/UserFlow/Loader"
-import { useGlobalUserDetailsContext } from "@frontend/context/UserDetailsContext"
-import { NotificationStatus } from "@frontend/types"
-import { WarningCircleIcon } from "@frontend/ui-components/CustomIcons"
-import queueNotification from "@frontend/ui-components/QueueNotification"
-import { addNewTransaction } from "@frontend/utils/addNewTransaction"
-import Avatar from "@frontend/components/Avatar/Avatar"
+import { Button, Form, Spin, Tooltip } from "antd";
+import React, { useState } from "react";
+import AddMultisigSVG from "@frontend/assets/add-multisig.svg";
+import FailedTransactionLottie from "@frontend/ui-components/lottie-graphics/FailedTransaction";
+import LoadingLottie from "@frontend/ui-components/lottie-graphics/Loading";
+import RemoveMultisigSVG from "@frontend/assets/remove-multisig.svg";
+import CancelBtn from "@frontend/components/Settings/CancelBtn";
+import RemoveBtn from "@frontend/components/Settings/RemoveBtn";
+import Loader from "@frontend/components/UserFlow/Loader";
+import { useGlobalUserDetailsContext } from "@frontend/context/UserDetailsContext";
+import { NotificationStatus } from "@frontend/types";
+import { WarningCircleIcon } from "@frontend/ui-components/CustomIcons";
+import queueNotification from "@frontend/ui-components/QueueNotification";
+import { addNewTransaction } from "@frontend/utils/addNewTransaction";
+import Avatar from "@frontend/components/Avatar/Avatar";
 
 const RemoveOwner = ({
   addressToRemove,
@@ -23,63 +23,64 @@ const RemoveOwner = ({
   oldSignatoriesLength,
   onCancel,
 }: {
-  addressToRemove: string
-  oldThreshold: number
-  oldSignatoriesLength: number
-  onCancel: () => void
+  addressToRemove: string;
+  oldThreshold: number;
+  oldSignatoriesLength: number;
+  onCancel: () => void;
 }) => {
   const [newThreshold, setNewThreshold] = useState(
     oldThreshold === oldSignatoriesLength ? oldThreshold - 1 : oldThreshold,
-  )
-  const [loading, setLoading] = useState(false)
-  const [success, setSuccess] = useState<boolean>(false)
-  const [failure, setFailure] = useState<boolean>(false)
+  );
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState<boolean>(false);
+  const [failure, setFailure] = useState<boolean>(false);
   const { multisigAddresses, activeMultisig, address, identityBackend } =
-    useGlobalUserDetailsContext()
-  const [txnHash] = useState<string>("")
+    useGlobalUserDetailsContext();
+  const [txnHash] = useState<string>("");
 
   const multisig = multisigAddresses.find(
     (item: any) =>
       item.address === activeMultisig || item.proxy === activeMultisig,
-  )
+  );
   const handleRemoveOwner = async () => {
-    setLoading(true)
+    setLoading(true);
     try {
       const safeTxHash = (
         await identityBackend.createRemoveOwnerTx(
           activeMultisig,
           addressToRemove,
           newThreshold,
+          address,
         )
-      ).data
+      ).data;
       if (safeTxHash) {
-        onCancel?.()
-        setLoading(false)
+        onCancel?.();
+        setLoading(false);
         queueNotification({
           header: "Success",
           message: "New Transaction Created.",
           status: NotificationStatus.SUCCESS,
-        })
+        });
       } else {
-        setLoading(false)
-        setFailure(true)
+        setLoading(false);
+        setFailure(true);
         queueNotification({
           header: "Error.",
           message: "Please try again.",
           status: NotificationStatus.ERROR,
-        })
+        });
       }
     } catch (err) {
-      onCancel?.()
-      setLoading(false)
-      setFailure(true)
+      onCancel?.();
+      setLoading(false);
+      setFailure(true);
       queueNotification({
         header: "Error.",
         message: "Please try again.",
         status: NotificationStatus.ERROR,
-      })
+      });
     }
-  }
+  };
 
   return (
     <>
@@ -110,7 +111,7 @@ const RemoveOwner = ({
             </section>
             <div className="text-primary text-sm mb-2">Remove Signatory*</div>
             <div className="flex items-center p-3 mb-4 text-text_secondary border-dashed border-2 border-bg-secondary rounded-lg gap-x-5">
-              <Avatar account={addressToRemove} size={4} />
+              <Avatar address={addressToRemove} size={4} />
               {addressToRemove}
             </div>
             <div className="text-primary text-sm mb-2">New Threshold</div>
@@ -122,7 +123,7 @@ const RemoveOwner = ({
                   <Button
                     onClick={() => {
                       if (newThreshold !== 2) {
-                        setNewThreshold((prev) => prev - 1)
+                        setNewThreshold((prev) => prev - 1);
                       }
                     }}
                     className={`p-0 outline-none border rounded-full flex items-center justify-center ${
@@ -144,7 +145,7 @@ const RemoveOwner = ({
                   <Button
                     onClick={() => {
                       if (newThreshold < oldSignatoriesLength - 1) {
-                        setNewThreshold((prev) => prev + 1)
+                        setNewThreshold((prev) => prev + 1);
                       }
                     }}
                     className={`p-0 outline-none border rounded-full flex items-center justify-center ${
@@ -173,7 +174,7 @@ const RemoveOwner = ({
         </Spin>
       )}
     </>
-  )
-}
+  );
+};
 
-export default RemoveOwner
+export default RemoveOwner;

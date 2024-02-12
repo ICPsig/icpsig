@@ -2,7 +2,7 @@
 // This software may be modified and distributed under the terms
 // of the Apache-2.0 license. See the LICENSE file for details.
 
-import { PlusCircleOutlined } from "@ant-design/icons"
+import { PlusCircleOutlined } from "@ant-design/icons";
 import {
   AutoComplete,
   Button,
@@ -12,46 +12,51 @@ import {
   Input,
   Modal,
   Spin,
-} from "antd"
-import { DefaultOptionType } from "antd/es/select"
-import classNames from "classnames"
-import React, { useEffect, useState } from "react"
-import LoadingLottie from "@frontend/ui-components/lottie-graphics/Loading"
-import CancelBtn from "@frontend/components/Settings/CancelBtn"
-import ModalBtn from "@frontend/components/Settings/ModalBtn"
-import { useActiveMultisigContext } from "@frontend/context/ActiveMultisigContext"
-import { useGlobalUserDetailsContext } from "@frontend/context/UserDetailsContext"
-import { EFieldType, NotificationStatus } from "@frontend/types"
-import AddressComponent from "@frontend/ui-components/AddressComponent"
-import Balance from "@frontend/ui-components/Balance"
-import BalanceInput from "@frontend/ui-components/BalanceInput"
+} from "antd";
+import { DefaultOptionType } from "antd/es/select";
+import classNames from "classnames";
+import React, { useEffect, useState } from "react";
+import LoadingLottie from "@frontend/ui-components/lottie-graphics/Loading";
+import CancelBtn from "@frontend/components/Settings/CancelBtn";
+import ModalBtn from "@frontend/components/Settings/ModalBtn";
+import { useActiveMultisigContext } from "@frontend/context/ActiveMultisigContext";
+import { useGlobalUserDetailsContext } from "@frontend/context/UserDetailsContext";
+import { EFieldType, NotificationStatus } from "@frontend/types";
+import AddressComponent from "@frontend/ui-components/AddressComponent";
+import Balance from "@frontend/ui-components/Balance";
+import BalanceInput from "@frontend/ui-components/BalanceInput";
 import {
   CircleArrowDownIcon,
   DeleteIcon,
   LineIcon,
   OutlineCloseIcon,
   SquareDownArrowIcon,
-} from "@frontend/ui-components/CustomIcons"
-import queueNotification from "@frontend/ui-components/QueueNotification"
-import { addNewTransaction } from "@frontend/utils/addNewTransaction"
-import { addToAddressBook } from "@frontend/utils/addToAddressBook"
-import getOtherSignatories from "@frontend/utils/getOtherSignatories"
-import { notify } from "@frontend/utils/notify"
-import styled from "styled-components"
+} from "@frontend/ui-components/CustomIcons";
+import queueNotification from "@frontend/ui-components/QueueNotification";
+import { addNewTransaction } from "@frontend/utils/addNewTransaction";
+import { addToAddressBook } from "@frontend/utils/addToAddressBook";
+import getOtherSignatories from "@frontend/utils/getOtherSignatories";
+import { notify } from "@frontend/utils/notify";
+import styled from "styled-components";
 
-import TransactionFailedScreen from "./TransactionFailedScreen"
-import TransactionSuccessScreen from "./TransactionSuccessScreen"
+import TransactionFailedScreen from "./TransactionFailedScreen";
+import TransactionSuccessScreen from "./TransactionSuccessScreen";
 
 export interface IRecipientAndAmount {
-  recipient: string
-  amount: string
+  recipient: string;
+  amount: string;
+}
+
+enum ESendMode {
+  SEND = "Send (IC Network)",
+  WITHDRAW = "Withdraw (Bitcoin Network)",
 }
 
 interface ISendFundsFormProps {
-  onCancel?: () => void
-  className?: string
-  setNewTxn?: React.Dispatch<React.SetStateAction<boolean>>
-  defaultSelectedAddress?: string
+  onCancel?: () => void;
+  className?: string;
+  setNewTxn?: React.Dispatch<React.SetStateAction<boolean>>;
+  defaultSelectedAddress?: string;
 }
 
 const SendFundsForm = ({
@@ -68,12 +73,14 @@ const SendFundsForm = ({
     multisigAddresses,
     transactionFields,
     activeMultisigData,
-  } = useGlobalUserDetailsContext()
-  const { records } = useActiveMultisigContext()
+    setActiveMultisigData,
+  } = useGlobalUserDetailsContext();
+  const { records } = useActiveMultisigContext();
+  const [selectedToken, setSelectedToken] = useState<string>("");
 
-  const [note, setNote] = useState<string>("")
-  const [loading, setLoading] = useState(false)
-  const [amount, setAmount] = useState("0")
+  const [note, setNote] = useState<string>("");
+  const [loading, setLoading] = useState(false);
+  const [amount, setAmount] = useState("0");
   const [recipientAndAmount, setRecipientAndAmount] = useState<
     IRecipientAndAmount[]
   >([
@@ -83,100 +90,110 @@ const SendFundsForm = ({
         ? defaultSelectedAddress || ""
         : address || "",
     },
-  ])
+  ]);
   const [autocompleteAddresses, setAutoCompleteAddresses] = useState<
     DefaultOptionType[]
-  >([])
-  const [success, setSuccess] = useState(false)
-  const [failure, setFailure] = useState(false)
+  >([]);
+  const [success, setSuccess] = useState(false);
+  const [failure, setFailure] = useState(false);
 
-  const [validRecipient, setValidRecipient] = useState<boolean[]>([true])
+  const [validRecipient, setValidRecipient] = useState<boolean[]>([true]);
 
-  const [form] = Form.useForm()
+  const [form] = Form.useForm();
 
-  const [multisigBalance, setMultisigBalance] = useState<string>("")
+  const [multisigBalance, setMultisigBalance] = useState<string>("");
 
-  const [loadingMessages] = useState<string>("")
+  const [loadingMessages] = useState<string>("");
 
-  const [transactionData] = useState<any>({})
+  const [transactionData] = useState<any>({});
 
-  const [showAddressModal, setShowAddressModal] = useState<boolean>(false)
+  const [showAddressModal, setShowAddressModal] = useState<boolean>(false);
 
-  const [category, setCategory] = useState<string>("none")
+  const [category, setCategory] = useState<string>("none");
 
   const [transactionFieldsObject, setTransactionFieldsObject] = useState<{
-    category: string
-    subfields: { [subfield: string]: { name: string; value: string } }
-  }>({ category: "none", subfields: {} })
+    category: string;
+    subfields: { [subfield: string]: { name: string; value: string } };
+  }>({ category: "none", subfields: {} });
+
+  const [sendMode, setSendMode] = useState<ESendMode>(ESendMode.SEND);
+  const [ckBTCAddress, setCkBTCAddress] = useState<string>("");
+
+  const sendModeOptions: any[] = Object.values(ESendMode).map((a) => ({
+    key: a,
+    label: (
+      <span className="flex items-center gap-x-2 text-white">{a}</span>
+    ) as any,
+  }));
 
   const onRecipientChange = (value: string, i: number) => {
     setRecipientAndAmount((prevState) => {
-      const copyArray = [...prevState]
-      const copyObject = { ...copyArray[i] }
-      copyObject.recipient = value
-      copyArray[i] = copyObject
-      return copyArray
-    })
-  }
+      const copyArray = [...prevState];
+      const copyObject = { ...copyArray[i] };
+      copyObject.recipient = value;
+      copyArray[i] = copyObject;
+      return copyArray;
+    });
+  };
   const onAmountChange = (amount: string, i: number) => {
     setRecipientAndAmount((prevState) => {
-      const copyArray = [...prevState]
-      const copyObject = { ...copyArray[i] }
-      copyObject.amount = amount
-      copyArray[i] = copyObject
-      return copyArray
-    })
-  }
+      const copyArray = [...prevState];
+      const copyObject = { ...copyArray[i] };
+      copyObject.amount = amount;
+      copyArray[i] = copyObject;
+      return copyArray;
+    });
+  };
 
   const onAddRecipient = () => {
     setRecipientAndAmount((prevState) => {
-      const copyOptionsArray = [...prevState]
-      copyOptionsArray.push({ amount: "0", recipient: "" })
-      return copyOptionsArray
-    })
-  }
+      const copyOptionsArray = [...prevState];
+      copyOptionsArray.push({ amount: "0", recipient: "" });
+      return copyOptionsArray;
+    });
+  };
 
   const onRemoveRecipient = (i: number) => {
-    const copyOptionsArray = [...recipientAndAmount]
-    copyOptionsArray.splice(i, 1)
-    setRecipientAndAmount(copyOptionsArray)
-  }
+    const copyOptionsArray = [...recipientAndAmount];
+    copyOptionsArray.splice(i, 1);
+    setRecipientAndAmount(copyOptionsArray);
+  };
 
   // Set address options for recipient
   useEffect(() => {
-    const allAddresses: string[] = []
+    const allAddresses: string[] = [];
     if (records) {
       Object.keys(records).forEach((address) => {
-        allAddresses.push(address)
-      })
+        allAddresses.push(address);
+      });
     }
     addressBook.forEach((item) => {
       if (!allAddresses.includes(item.address)) {
-        allAddresses.push(item.address)
+        allAddresses.push(item.address);
       }
-    })
+    });
     setAutoCompleteAddresses(
       allAddresses.map((address) => ({
         label: <AddressComponent withBadge={false} address={address} />,
         value: address,
       })),
-    )
-  }, [address, addressBook, records])
+    );
+  }, [address, addressBook, records]);
 
   useEffect(() => {
-    setTransactionFieldsObject({ category, subfields: {} })
-  }, [category])
+    setTransactionFieldsObject({ category, subfields: {} });
+  }, [category]);
 
   useEffect(() => {
     const total = recipientAndAmount.reduce(
       (sum, item) => sum + Number(item.amount),
       0,
-    )
-    setAmount(total.toString())
-  }, [activeMultisigData, recipientAndAmount])
+    );
+    setAmount(total.toString());
+  }, [activeMultisigData, recipientAndAmount]);
 
   useEffect(() => {
-    if (!recipientAndAmount) return
+    if (!recipientAndAmount) return;
 
     recipientAndAmount.forEach((item, i) => {
       if (
@@ -188,90 +205,99 @@ const SendFundsForm = ({
         ) !== i
       ) {
         setValidRecipient((prev) => {
-          const copyArray = [...prev]
-          copyArray[i] = false
-          return copyArray
-        })
+          const copyArray = [...prev];
+          copyArray[i] = false;
+          return copyArray;
+        });
       } else {
         setValidRecipient((prev) => {
-          const copyArray = [...prev]
-          copyArray[i] = true
-          return copyArray
-        })
+          const copyArray = [...prev];
+          copyArray[i] = true;
+          return copyArray;
+        });
       }
-    })
-  }, [recipientAndAmount])
+    });
+  }, [recipientAndAmount]);
 
   const handleSubmit = async () => {
-    setLoading(true)
+    setLoading(true);
     try {
-      const recipients = recipientAndAmount.map((r) => r.recipient)
-      const amounts = recipientAndAmount.map((a) => a.amount)
+      const recipients = recipientAndAmount.map((r) => r.recipient);
+      const amounts = recipientAndAmount.map((a) => a.amount);
       const multisigValutTx = (
         await identityBackend.createTransferTx(
           activeMultisig,
           recipients,
           amounts,
+          address,
         )
-      ).data
+      ).data;
 
       if (multisigValutTx) {
+        console.log(amount);
+        setActiveMultisigData((prev: any) => {
+          console.log(prev.balance);
+          return {
+            ...prev,
+            balance: Number(prev?.balance || 0) - Number(amount || 0),
+          };
+        });
         queueNotification({
           header: "Success",
           message: "New Transaction Created.",
           status: NotificationStatus.SUCCESS,
-        })
-        setSuccess(true)
+        });
+        setSuccess(true);
       } else {
         queueNotification({
           header: "Error.",
           message: "Please try again.",
           status: NotificationStatus.ERROR,
-        })
-        setFailure(true)
-        setLoading(false)
+        });
+        setFailure(true);
+        setLoading(false);
       }
     } catch (err) {
-      console.log(err)
-      setNewTxn?.((prev) => !prev)
-      onCancel?.()
-      setFailure(true)
-      setLoading(false)
+      console.log(err);
+      setNewTxn?.((prev) => !prev);
+      onCancel?.();
+      setFailure(true);
+      setLoading(false);
       queueNotification({
         header: "Error.",
         message: "Please try again.",
         status: NotificationStatus.ERROR,
-      })
+      });
     }
-  }
+  };
 
   const AddAddressModal = ({ defaultAddress }: { defaultAddress: string }) => {
-    const [addAddressName, setAddAddressName] = useState("")
-    const [addAddressLoading, setAddAddressLoading] = useState(false)
+    const [addAddressName, setAddAddressName] = useState("");
+    const [addAddressLoading, setAddAddressLoading] = useState(false);
 
     const handleAddAddress = async () => {
-      setAddAddressLoading(true)
+      setAddAddressLoading(true);
       const newAddresses = await addToAddressBook({
         address: defaultAddress,
         addressBook,
         name: addAddressName,
-      } as any)
-      setAddAddressLoading(false)
+      } as any);
+      setAddAddressLoading(false);
       if (newAddresses) {
         setAutoCompleteAddresses(
           newAddresses.map((item) => ({
             label: <AddressComponent name={item.name} address={item.address} />,
             value: item.address,
           })),
-        )
+        );
       }
-      setShowAddressModal(false)
+      setShowAddressModal(false);
       queueNotification({
         header: "Successful!",
         message: "Your Address has been Added.",
         status: NotificationStatus.SUCCESS,
-      })
-    }
+      });
+    };
     return (
       <>
         <Modal
@@ -352,8 +378,8 @@ const SendFundsForm = ({
           </Form>
         </Modal>
       </>
-    )
-  }
+    );
+  };
 
   return (
     <>
@@ -367,15 +393,15 @@ const SendFundsForm = ({
           sender={address}
           recipients={recipientAndAmount.map((item) => item.recipient)}
           onDone={() => {
-            setNewTxn?.((prev) => !prev)
-            onCancel?.()
+            setNewTxn?.((prev) => !prev);
+            onCancel?.();
           }}
         />
       ) : failure ? (
         <TransactionFailedScreen
           onDone={() => {
-            setNewTxn?.((prev) => !prev)
-            onCancel?.()
+            setNewTxn?.((prev) => !prev);
+            onCancel?.();
           }}
           txnHash={transactionData?.callHash || ""}
           sender={address}
@@ -435,101 +461,114 @@ const SendFundsForm = ({
                         key={recipient}
                         className="w-[500px] flex items-start gap-x-2"
                       >
-                        <AddAddressModal defaultAddress={recipient} />
-                        <div className="w-[55%]">
-                          <label className="text-primary font-normal text-xs leading-[13px] block mb-[5px]">
-                            Recipient*
-                          </label>
-                          <Form.Item
-                            name="recipient"
-                            rules={[{ required: true }]}
-                            help={
-                              (!recipient && "Recipient Address is Required") ||
-                              (!validRecipient[i] &&
-                                "Please add a valid Address")
-                            }
-                            className="border-0 outline-0 my-0 p-0"
-                            validateStatus={
-                              recipient && validRecipient[i]
-                                ? "success"
-                                : "error"
-                            }
-                          >
-                            <div className="h-[50px]">
-                              {recipient &&
-                              autocompleteAddresses.some(
-                                (item) =>
-                                  item.value &&
-                                  String(item.value) === recipient,
-                              ) ? (
-                                <div className="border border-solid border-primary rounded-lg px-2 h-full flex justify-between items-center">
-                                  {
-                                    autocompleteAddresses.find(
-                                      (item) =>
-                                        item.value &&
-                                        String(item.value) === recipient,
-                                    )?.label
-                                  }
-                                  <button
-                                    className="outline-none border-none bg-highlight w-6 h-6 rounded-full flex items-center justify-center z-100"
-                                    onClick={() => {
-                                      onRecipientChange("", i)
-                                    }}
-                                  >
-                                    <OutlineCloseIcon className="text-primary w-2 h-2" />
-                                  </button>
-                                </div>
-                              ) : (
-                                <AutoComplete
-                                  autoFocus
-                                  defaultOpen
-                                  filterOption={(inputValue, options) => {
-                                    return inputValue && options?.value
-                                      ? String(options?.value) === inputValue
-                                      : true
-                                  }}
-                                  notFoundContent={
-                                    validRecipient[i] && (
-                                      <Button
-                                        icon={
-                                          <PlusCircleOutlined className="text-primary" />
-                                        }
-                                        className="bg-transparent border-none outline-none text-primary text-sm flex items-center"
-                                        onClick={() =>
-                                          setShowAddressModal(true)
-                                        }
-                                      >
-                                        Add Address to Address Book
-                                      </Button>
-                                    )
-                                  }
-                                  options={autocompleteAddresses.filter(
+                        {selectedToken !== "ckBTC" && (
+                          <>
+                            <AddAddressModal defaultAddress={recipient} />
+                            <div className="w-[55%]">
+                              <label className="text-primary font-normal text-xs leading-[13px] block mb-[5px]">
+                                Recipient*
+                              </label>
+                              <Form.Item
+                                name="recipient"
+                                rules={[{ required: true }]}
+                                help={
+                                  (!recipient &&
+                                    "Recipient Address is Required") ||
+                                  (!validRecipient[i] &&
+                                    "Please add a valid Address")
+                                }
+                                className="border-0 outline-0 my-0 p-0"
+                                validateStatus={
+                                  recipient && validRecipient[i]
+                                    ? "success"
+                                    : "error"
+                                }
+                              >
+                                <div className="h-[50px]">
+                                  {recipient &&
+                                  autocompleteAddresses.some(
                                     (item) =>
-                                      !recipientAndAmount.some(
-                                        (r) =>
-                                          r.recipient &&
-                                          item.value &&
-                                          r.recipient ===
-                                            (String(item.value) || ""),
-                                      ),
+                                      item.value &&
+                                      String(item.value) === recipient,
+                                  ) ? (
+                                    <div className="border border-solid border-primary rounded-lg px-2 h-full flex justify-between items-center">
+                                      {
+                                        autocompleteAddresses.find(
+                                          (item) =>
+                                            item.value &&
+                                            String(item.value) === recipient,
+                                        )?.label
+                                      }
+                                      <button
+                                        className="outline-none border-none bg-highlight w-6 h-6 rounded-full flex items-center justify-center z-100"
+                                        onClick={() => {
+                                          onRecipientChange("", i);
+                                        }}
+                                      >
+                                        <OutlineCloseIcon className="text-primary w-2 h-2" />
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <AutoComplete
+                                      autoFocus
+                                      defaultOpen
+                                      filterOption={(inputValue, options) => {
+                                        return inputValue && options?.value
+                                          ? String(options?.value) ===
+                                              inputValue
+                                          : true;
+                                      }}
+                                      notFoundContent={
+                                        validRecipient[i] && (
+                                          <Button
+                                            icon={
+                                              <PlusCircleOutlined className="text-primary" />
+                                            }
+                                            className="bg-transparent border-none outline-none text-primary text-sm flex items-center"
+                                            onClick={() =>
+                                              setShowAddressModal(true)
+                                            }
+                                          >
+                                            Add Address to Address Book
+                                          </Button>
+                                        )
+                                      }
+                                      options={autocompleteAddresses.filter(
+                                        (item) =>
+                                          !recipientAndAmount.some(
+                                            (r) =>
+                                              r.recipient &&
+                                              item.value &&
+                                              r.recipient ===
+                                                (String(item.value) || ""),
+                                          ),
+                                      )}
+                                      id="recipient"
+                                      placeholder="Send to Address.."
+                                      onChange={(value) =>
+                                        onRecipientChange(value, i)
+                                      }
+                                      value={recipientAndAmount[i].recipient}
+                                      defaultValue={
+                                        defaultSelectedAddress || ""
+                                      }
+                                    />
                                   )}
-                                  id="recipient"
-                                  placeholder="Send to Address.."
-                                  onChange={(value) =>
-                                    onRecipientChange(value, i)
-                                  }
-                                  value={recipientAndAmount[i].recipient}
-                                  defaultValue={defaultSelectedAddress || ""}
-                                />
-                              )}
+                                </div>
+                              </Form.Item>
                             </div>
-                          </Form.Item>
-                        </div>
-                        <div className="flex items-center gap-x-2 w-[45%]">
+                          </>
+                        )}
+                        <div
+                          className={`flex items-center gap-x-2 w-[${
+                            selectedToken === "ckBTC" ? "100%" : "45%"
+                          }]`}
+                        >
                           <BalanceInput
                             label="Amount*"
                             fromBalance={multisigBalance}
                             onChange={(balance) => onAmountChange(balance, i)}
+                            setToken={setSelectedToken}
                           />
                           {i !== 0 && (
                             <Button
@@ -543,13 +582,15 @@ const SendFundsForm = ({
                       </article>
                     ))}
                   </div>
-                  <Button
-                    icon={<PlusCircleOutlined className="text-primary" />}
-                    className="bg-transparent p-0 border-none outline-none text-primary text-sm flex items-center"
-                    onClick={onAddRecipient}
-                  >
-                    Add Another Recipient
-                  </Button>
+                  {selectedToken !== "ckBTC" && (
+                    <Button
+                      icon={<PlusCircleOutlined className="text-primary" />}
+                      className="bg-transparent p-0 border-none outline-none text-primary text-sm flex items-center"
+                      onClick={onAddRecipient}
+                    >
+                      Add Another Recipient
+                    </Button>
+                  )}
                 </div>
                 <div className="flex flex-col gap-y-4">
                   <article className="w-[412px] flex items-center">
@@ -575,6 +616,54 @@ const SendFundsForm = ({
                 </div>
               </div>
             </section>
+
+            {selectedToken === "ckBTC" ? (
+              <section className="mt-[15px] w-[500px]">
+                <label className="text-primary font-normal text-xs block mb-[5px]">
+                  Send Mode*
+                </label>
+                <Form.Item
+                  name="send_mode"
+                  rules={[{ message: "Required", required: true }]}
+                  className="border-0 outline-0 my-0 p-0"
+                >
+                  <Dropdown
+                    trigger={["click"]}
+                    className={
+                      "border border-primary rounded-lg p-2 bg-bg-secondary cursor-pointer"
+                    }
+                    menu={{
+                      items: sendModeOptions,
+                      onClick: (e) => setSendMode(e.key as ESendMode),
+                    }}
+                  >
+                    <div className="flex justify-between items-center text-white">
+                      {sendMode}
+                      <CircleArrowDownIcon className="text-primary" />
+                    </div>
+                  </Dropdown>
+                </Form.Item>
+                <label className="text-primary font-normal text-xs block mb-[5px] mt-[10px]">
+                  To*
+                </label>
+                <Form.Item
+                  name="ckBTC"
+                  rules={[{ message: "Required", required: true }]}
+                  className="border-0 outline-0 my-0 p-0"
+                >
+                  <Input
+                    placeholder={
+                      selectedToken === "ckBTC"
+                        ? "Please enter you bitcoin wallet"
+                        : "Enter Pricipal ID or Account ID"
+                    }
+                    className="w-full text-sm font-normal leading-[15px] border-0 outline-0 p-3 placeholder:text-[#505050] bg-bg-secondary rounded-lg text-white pr-24 resize-none"
+                    value={ckBTCAddress}
+                    onChange={(e) => setCkBTCAddress(e.target.value)}
+                  />
+                </Form.Item>
+              </section>
+            ) : null}
 
             <section className="mt-[15px] w-[500px]">
               <label className="text-primary font-normal text-xs block mb-[5px]">
@@ -623,7 +712,7 @@ const SendFundsForm = ({
               Object.keys(transactionFields[category].subfields).map(
                 (subfield) => {
                   const subfieldObject =
-                    transactionFields[category].subfields[subfield]
+                    transactionFields[category].subfields[subfield];
                   return (
                     <section key={subfield} className="mt-[15px]">
                       <label className="text-primary font-normal text-xs block mb-[5px]">
@@ -674,7 +763,7 @@ const SendFundsForm = ({
                                           value: e.key,
                                         },
                                       },
-                                    }))
+                                    }));
                                   },
                                 }}
                               >
@@ -732,7 +821,7 @@ const SendFundsForm = ({
                         </article>
                       </div>
                     </section>
-                  )
+                  );
                 },
               )}
 
@@ -789,8 +878,8 @@ const SendFundsForm = ({
         </Spin>
       )}
     </>
-  )
-}
+  );
+};
 
 export default styled(SendFundsForm)`
   .ant-select input {
@@ -836,4 +925,4 @@ export default styled(SendFundsForm)`
     transform: scale(0.9) !important;
     transform-origin: center !important;
   }
-`
+`;

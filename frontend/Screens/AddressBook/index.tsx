@@ -2,42 +2,43 @@
 // This software may be modified and distributed under the terms
 // of the Apache-2.0 license. See the LICENSE file for details.
 
-import { Button, Modal } from "antd"
-import { Input } from "antd"
-import React, { useEffect, useState } from "react"
-import { Link } from "react-router-dom"
-import AddAdress from "../../components/AddressBook/AddAddress"
-import AddressTable from "../../components/AddressBook/AddressTable"
-import ExportAdress from "../../components/AddressBook/ExportAddress"
-import ImportAdress from "../../components/AddressBook/ImportAddress"
-import { useActiveMultisigContext } from "@frontend/context/ActiveMultisigContext"
-import { useGlobalIdentityContext } from "@frontend/context/IdentityProviderContext"
-import { useModalContext } from "@frontend/context/ModalContext"
-import { useGlobalUserDetailsContext } from "@frontend/context/UserDetailsContext"
-import { IAllAddresses } from "@frontend/types"
+import { Button, Modal } from "antd";
+import { Input } from "antd";
+import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import AddAdress from "../../components/AddressBook/AddAddress";
+import AddressTable from "../../components/AddressBook/AddressTable";
+import ExportAdress from "../../components/AddressBook/ExportAddress";
+import ImportAdress from "../../components/AddressBook/ImportAddress";
+import { useActiveMultisigContext } from "@frontend/context/ActiveMultisigContext";
+import { useGlobalIdentityContext } from "@frontend/context/IdentityProviderContext";
+import { useModalContext } from "@frontend/context/ModalContext";
+import { useGlobalUserDetailsContext } from "@frontend/context/UserDetailsContext";
+import { IAllAddresses } from "@frontend/types";
 import {
   ExternalLinkIcon,
   OutlineCloseIcon,
   SearchIcon,
-} from "@frontend/ui-components/CustomIcons"
+} from "@frontend/ui-components/CustomIcons";
 import {
   AddBoxIcon,
   ExportArrowIcon,
   ImportArrowIcon,
-} from "@frontend/ui-components/CustomIcons"
-import Loader from "@frontend/ui-components/Loader"
+} from "@frontend/ui-components/CustomIcons";
+import Loader from "@frontend/ui-components/Loader";
 const AddressBook = ({ className }: { className?: string }) => {
-  const [searchTerm, setSearchTerm] = useState("")
-  const { addressBook, loading } = useGlobalUserDetailsContext()
-  const { records } = useActiveMultisigContext()
-  const { openModal } = useModalContext()
-  const { account: userAddress } = useGlobalIdentityContext()
-  const [addresses, setAddresses] = useState<IAllAddresses>({} as any)
-  const [openAddAddressModal, setOpenAddAddressModal] = useState<boolean>(false)
+  const [searchTerm, setSearchTerm] = useState("");
+  const { addressBook, loading } = useGlobalUserDetailsContext();
+  const { records } = useActiveMultisigContext();
+  const { openModal } = useModalContext();
+  const { account: userAddress } = useGlobalIdentityContext();
+  const [addresses, setAddresses] = useState<IAllAddresses>({} as any);
+  const [openAddAddressModal, setOpenAddAddressModal] =
+    useState<boolean>(false);
 
   useEffect(() => {
-    setAddresses({})
-    const allAddresses: IAllAddresses = {}
+    setAddresses({});
+    const allAddresses: IAllAddresses = {};
     if (records) {
       Object.keys(records).forEach((address) => {
         allAddresses[address] = {
@@ -49,17 +50,17 @@ const AddressBook = ({ className }: { className?: string }) => {
           roles: records[address].roles,
           shared: true,
           telegram: records[address].telegram,
-        }
-      })
+        };
+      });
     }
     addressBook.forEach((item) => {
-      const address = item.address
+      const address = item.address;
       if (Object.keys(allAddresses).includes(address)) {
         if (item.nickName) {
-          allAddresses[address].nickName = item.nickName
+          allAddresses[address].nickName = item.nickName;
         }
         if (!allAddresses[address].name) {
-          allAddresses[address].name = item.name
+          allAddresses[address].name = item.name;
         }
       } else {
         allAddresses[address] = {
@@ -71,9 +72,9 @@ const AddressBook = ({ className }: { className?: string }) => {
           roles: item.roles,
           shared: false,
           telegram: item.telegram,
-        }
+        };
       }
-    })
+    });
 
     Object.keys(allAddresses)
       ?.filter(
@@ -103,10 +104,10 @@ const AddressBook = ({ className }: { className?: string }) => {
               shared: allAddresses[address]?.shared,
               telegram: allAddresses[address]?.telegram,
             },
-          }
-        })
-      })
-  }, [addressBook, records, searchTerm])
+          };
+        });
+      });
+  }, [addressBook, records, searchTerm]);
 
   const AddAddressModal = ({ className }: { className?: string }) => {
     return (
@@ -142,11 +143,11 @@ const AddressBook = ({ className }: { className?: string }) => {
           />
         </Modal>
       </>
-    )
-  }
+    );
+  };
 
   if (loading) {
-    return <Loader size="large" />
+    return <Loader size="large" />;
   }
   return (
     <div className="scale-[80%] w-[125%] h-[125%] p-5 origin-top-left bg-bg-main rounded-lg">
@@ -199,7 +200,7 @@ const AddressBook = ({ className }: { className?: string }) => {
         </div>
       )}
     </div>
-  )
-}
+  );
+};
 
-export default AddressBook
+export default AddressBook;

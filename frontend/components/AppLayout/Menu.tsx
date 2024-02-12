@@ -4,15 +4,15 @@
 // Copyright 2022-2023 @Polkasafe/polkaSafe-ui authors & contributors
 // This software may be modified and distributed under the terms
 // of the Apache-2.0 license. See the LICENSE file for details.
-import { Modal } from "antd"
-import classNames from "classnames"
-import React, { FC, useEffect, useState } from "react"
-import { Link, useLocation } from "react-router-dom"
-import icpLogo from "../../assets/icp-logo.png"
-import icpText from "../../assets/icp-text.tif.png"
-import CreateMultisig from "../Multisig/CreateMultisig"
-import { useGlobalUserDetailsContext } from "@frontend/context/UserDetailsContext"
-import { useGlobalIdentityContext } from "@frontend/context/IdentityProviderContext"
+import { Modal } from "antd";
+import classNames from "classnames";
+import React, { FC, useEffect, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
+import icpLogo from "../../assets/icp-logo.png";
+import icpText from "../../assets/icp-text.tif.png";
+import CreateMultisig from "../Multisig/CreateMultisig";
+import { useGlobalUserDetailsContext } from "@frontend/context/UserDetailsContext";
+import { useGlobalIdentityContext } from "@frontend/context/IdentityProviderContext";
 import {
   AddressBookIcon,
   AssetsIcon,
@@ -22,19 +22,19 @@ import {
   SettingsIcon,
   TransactionIcon,
   UserPlusIcon,
-} from "@frontend/ui-components/CustomIcons"
-import Avatar from "../Avatar/Avatar"
+} from "@frontend/ui-components/CustomIcons";
+import Avatar from "../Avatar/Avatar";
 
 interface Props {
-  className?: string
+  className?: string;
 }
 
 type TMenuItems = {
-  icon: React.JSX.Element
-  key: string
-  title: string
-  disabled?: boolean
-}[]
+  icon: React.JSX.Element;
+  key: string;
+  title: string;
+  disabled?: boolean;
+}[];
 
 const Menu: FC<Props> = ({ className }) => {
   const {
@@ -42,19 +42,19 @@ const Menu: FC<Props> = ({ className }) => {
     setUserDetailsContextState,
     activeMultisig,
     multisigSettings,
-  } = useGlobalUserDetailsContext()
-  const { account: userAddress } = useGlobalIdentityContext()
+  } = useGlobalUserDetailsContext();
+  const { account: userAddress } = useGlobalIdentityContext();
   const [selectedMultisigAddress, setSelectedMultisigAddress] = useState(
     activeMultisig || localStorage.getItem("active_multisig") || "",
-  )
-  const location = useLocation()
+  );
+  const location = useLocation();
   useEffect(() => {
     if (activeMultisig) {
-      setSelectedMultisigAddress(activeMultisig)
+      setSelectedMultisigAddress(activeMultisig);
     }
-  }, [activeMultisig])
+  }, [activeMultisig]);
 
-  const [openAddMultisig, setOpenAddMultisig] = useState(false)
+  const [openAddMultisig, setOpenAddMultisig] = useState(false);
 
   const menuItems: TMenuItems = [
     {
@@ -77,7 +77,7 @@ const Menu: FC<Props> = ({ className }) => {
       key: "/address-book",
       title: "Address Book",
     },
-  ]
+  ];
 
   if (userAddress) {
     menuItems.push(
@@ -92,7 +92,7 @@ const Menu: FC<Props> = ({ className }) => {
         key: "/settings",
         title: "Settings",
       },
-    )
+    );
   }
 
   const AddMultisigModal: FC = () => {
@@ -116,8 +116,8 @@ const Menu: FC<Props> = ({ className }) => {
       >
         <CreateMultisig onCancel={() => setOpenAddMultisig(false)} />
       </Modal>
-    )
-  }
+    );
+  };
 
   return (
     <div
@@ -165,7 +165,7 @@ const Menu: FC<Props> = ({ className }) => {
                     )}
                   </Link>
                 </li>
-              )
+              );
             })}
           </ul>
         </section>
@@ -201,19 +201,19 @@ const Menu: FC<Props> = ({ className }) => {
                           return {
                             ...prevState,
                             activeMultisig: multisig.address,
-                          }
-                        })
+                          };
+                        });
                         localStorage.setItem(
                           "active_multisig",
                           multisig.address,
-                        )
+                        );
                       }}
                     >
-                      <Avatar account={multisig.address} size={5} />
+                      <Avatar address={multisig.address} size={5} />
                       <span className="truncate">{multisig.name}</span>
                     </button>
                   </li>
-                )
+                );
               })}
           </ul>
         )}
@@ -230,7 +230,7 @@ const Menu: FC<Props> = ({ className }) => {
         </section>
       )}
     </div>
-  )
-}
+  );
+};
 
-export default Menu
+export default Menu;

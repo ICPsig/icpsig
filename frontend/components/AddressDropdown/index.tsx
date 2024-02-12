@@ -1,51 +1,51 @@
 // Copyright 2022-2023 @Polkasafe/polkaSafe-ui authors & contributors
 // This software may be modified and distributed under the terms
 // of the Apache-2.0 license. See the LICENSE file for details.
-import { Button } from "antd"
-import classNames from "classnames"
-import { useGlobalIdentityContext } from "@frontend/context/IdentityProviderContext"
-import { useGlobalUserDetailsContext } from "@frontend/context/UserDetailsContext"
-import { DEFAULT_ADDRESS_NAME } from "../../global/default"
-import Balance from "@frontend/ui-components/Balance"
+import { Button } from "antd";
+import classNames from "classnames";
+import { useGlobalIdentityContext } from "@frontend/context/IdentityProviderContext";
+import { useGlobalUserDetailsContext } from "@frontend/context/UserDetailsContext";
+import { DEFAULT_ADDRESS_NAME } from "../../global/default";
+import Balance from "@frontend/ui-components/Balance";
 import {
   CircleArrowDownIcon,
   CopyIcon,
-} from "@frontend/ui-components/CustomIcons"
-import copyText from "../../utils/copyText"
-import shortenAddress from "../../utils/shortenAddress"
-import React, { useRef, useState } from "react"
-import { Link, useNavigate } from "react-router-dom"
-import Avatar from "../Avatar/Avatar"
+} from "@frontend/ui-components/CustomIcons";
+import copyText from "../../utils/copyText";
+import shortenAddress from "../../utils/shortenAddress";
+import React, { useRef, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import Avatar from "../Avatar/Avatar";
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 interface IAddress {
-  value: string
-  imgSrc: string
+  value: string;
+  imgSrc: string;
 }
 
 const AddressDropdown = () => {
-  const { account } = useGlobalIdentityContext()
+  const { account } = useGlobalIdentityContext();
   const { addressBook, loggedInWallet, setUserDetailsContextState } =
-    useGlobalUserDetailsContext()
-  const navigate = useNavigate()
+    useGlobalUserDetailsContext();
+  const navigate = useNavigate();
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [isVisible, toggleVisibility] = useState(false)
-  const isMouseEnter = useRef(false)
+  const [isVisible, toggleVisibility] = useState(false);
+  const isMouseEnter = useRef(false);
 
   const handleDisconnect = async () => {
-    localStorage.clear()
+    localStorage.clear();
     setUserDetailsContextState((prevState: any) => {
       return {
         ...prevState,
         activeMultisig: "",
         addressBook: [],
         multisigAddresses: [],
-      }
-    })
-    toggleVisibility(false)
-    return navigate("/", { replace: true })
-  }
+      };
+    });
+    toggleVisibility(false);
+    return navigate("/", { replace: true });
+  };
 
   if (!account) {
     return (
@@ -56,7 +56,7 @@ const AddressDropdown = () => {
         {/* <WarningRoundedIcon className="text-sm text-primary" /> */}
         Not Connected
       </Link>
-    )
+    );
   }
 
   return (
@@ -64,7 +64,7 @@ const AddressDropdown = () => {
       className="relative"
       onBlur={() => {
         if (!isMouseEnter.current) {
-          isVisible ? toggleVisibility(false) : null
+          isVisible ? toggleVisibility(false) : null;
         }
       }}
     >
@@ -75,7 +75,7 @@ const AddressDropdown = () => {
         className="flex items-center justify-center gap-x-2 outline-none border-none text-white bg-highlight rounded-lg p-2.5 shadow-none text-xs"
       >
         <p className="flex items-center gap-x-2">
-          <Avatar account={account} size={6} />
+          <Avatar address={account || ""} size={30} />
           <span
             title={account}
             className="hidden md:inline-flex w-20 overflow-hidden truncate"
@@ -101,15 +101,15 @@ const AddressDropdown = () => {
           },
         )}
         onMouseEnter={() => {
-          isMouseEnter.current = true
+          isMouseEnter.current = true;
         }}
         onMouseLeave={() => {
-          isMouseEnter.current = false
+          isMouseEnter.current = false;
         }}
       >
         <div className="flex items-center justify-center flex-col gap-y-5">
           <div className="flex items-center justify-center flex-col gap-y-2">
-            <Avatar account={account} size={10} />
+            <Avatar address={account} size={50} />
             <p className="text-white font-normal text-sm">
               {addressBook?.find((item: any) => item.address === account)
                 ?.name || DEFAULT_ADDRESS_NAME}
@@ -139,7 +139,7 @@ const AddressDropdown = () => {
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default AddressDropdown
+export default AddressDropdown;

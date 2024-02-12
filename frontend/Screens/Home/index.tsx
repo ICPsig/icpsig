@@ -2,20 +2,20 @@
 // This software may be modified and distributed under the terms
 // of the Apache-2.0 license. See the LICENSE file for details.
 /* eslint-disable sort-keys */
-import dayjs from "dayjs"
-import React, { useEffect, useState } from "react"
-import AddressCard from "@frontend/components/Home/AddressCard"
-import ConnectWallet from "@frontend/components/Home/ConnectWallet"
-import ConnectWalletWrapper from "@frontend/components/Home/ConnectWallet/ConnectWalletWrapper"
-import NewUserModal from "@frontend/components/Home/ConnectWallet/NewUserModal"
-import DashboardCard from "@frontend/components/Home/DashboardCard"
-import TxnCard from "@frontend/components/Home/TxnCard"
-import AddMultisig from "@frontend/components/Multisig/AddMultisig"
-import Loader from "@frontend/components/UserFlow/Loader"
-import { useGlobalIdentityContext } from "@frontend/context/IdentityProviderContext"
-import { useGlobalUserDetailsContext } from "@frontend/context/UserDetailsContext"
-import Spinner from "@frontend/ui-components/Loader"
-import styled from "styled-components"
+import dayjs from "dayjs";
+import React, { useEffect, useState } from "react";
+import AddressCard from "@frontend/components/Home/AddressCard";
+import ConnectWallet from "@frontend/components/Home/ConnectWallet";
+import ConnectWalletWrapper from "@frontend/components/Home/ConnectWallet/ConnectWalletWrapper";
+import NewUserModal from "@frontend/components/Home/ConnectWallet/NewUserModal";
+import DashboardCard from "@frontend/components/Home/DashboardCard";
+import TxnCard from "@frontend/components/Home/TxnCard";
+import AddMultisig from "@frontend/components/Multisig/AddMultisig";
+import Loader from "@frontend/components/UserFlow/Loader";
+import { useGlobalIdentityContext } from "@frontend/context/IdentityProviderContext";
+import { useGlobalUserDetailsContext } from "@frontend/context/UserDetailsContext";
+import Spinner from "@frontend/ui-components/Loader";
+import styled from "styled-components";
 
 const Home = () => {
   const {
@@ -26,44 +26,44 @@ const Home = () => {
     identityBackend,
     createdAt,
     addressBook,
-  } = useGlobalUserDetailsContext()
-  const [hasProxy] = useState<boolean>(true)
+  } = useGlobalUserDetailsContext();
+  const [hasProxy] = useState<boolean>(true);
 
-  const [transactionLoading] = useState(false)
-  const [isOnchain, setIsOnchain] = useState(true)
-  const [openTransactionModal, setOpenTransactionModal] = useState(false)
-  const [openNewUserModal, setOpenNewUserModal] = useState(false)
-  const { account } = useGlobalIdentityContext()
+  const [transactionLoading] = useState(false);
+  const [isOnchain, setIsOnchain] = useState(true);
+  const [openTransactionModal, setOpenTransactionModal] = useState(false);
+  const [openNewUserModal, setOpenNewUserModal] = useState(false);
+  const { account } = useGlobalIdentityContext();
 
   useEffect(() => {
     if (
       dayjs(createdAt) > dayjs().subtract(15, "seconds") &&
       addressBook?.length === 1
     ) {
-      setOpenNewUserModal(true)
+      setOpenNewUserModal(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [createdAt])
+  }, [createdAt]);
 
   useEffect(() => {
     const handleNewTransaction = async () => {
       if (!activeMultisig || Boolean(!Object.keys(identityBackend).length))
-        return
+        return;
       const identityData = await identityBackend.getMultisigInfoByAddress(
         activeMultisig,
-      )
+      );
       if (identityData) {
-        setIsOnchain(true)
+        setIsOnchain(true);
       } else {
-        setIsOnchain(false)
+        setIsOnchain(false);
       }
-    }
-    handleNewTransaction()
-  }, [activeMultisig, identityBackend])
+    };
+    handleNewTransaction();
+  }, [activeMultisig, identityBackend]);
 
   return (
     <>
-      {!account ? (
+      {account ? (
         <>
           <NewUserModal
             open={openNewUserModal}
@@ -110,8 +110,8 @@ const Home = () => {
         </ConnectWalletWrapper>
       )}
     </>
-  )
-}
+  );
+};
 
 export default styled(Home)`
   .ant-spin-nested-loading .ant-spin-blur {
@@ -120,4 +120,4 @@ export default styled(Home)`
   .ant-spin-nested-loading .ant-spin-blur::after {
     opacity: 1 !important;
   }
-`
+`;

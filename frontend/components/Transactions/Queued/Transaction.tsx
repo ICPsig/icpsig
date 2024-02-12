@@ -1,49 +1,49 @@
 // Copyright 2022-2023 @Polkasafe/polkaSafe-ui authors & contributors
 // This software may be modified and distributed under the terms
 // of the Apache-2.0 license. See the LICENSE file for details.
-import { Collapse, Divider, Skeleton } from "antd"
-import classNames from "classnames"
-import dayjs from "dayjs"
-import React, { FC, useCallback, useEffect, useState } from "react"
-import { useNavigate } from "react-router-dom"
-import { useLocation } from "react-router-dom"
-import { useGlobalUserDetailsContext } from "@frontend/context/UserDetailsContext"
-import { firebaseFunctionsHeader } from "@frontend/global/firebaseFunctionsHeader"
-import { FIREBASE_FUNCTIONS_URL } from "@frontend/global/firebaseFunctionsUrl"
-import { chainProperties } from "@frontend/global/networkConstants"
+import { Collapse, Divider, Skeleton } from "antd";
+import classNames from "classnames";
+import dayjs from "dayjs";
+import React, { FC, useCallback, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
+import { useGlobalUserDetailsContext } from "@frontend/context/UserDetailsContext";
+import { firebaseFunctionsHeader } from "@frontend/global/firebaseFunctionsHeader";
+import { FIREBASE_FUNCTIONS_URL } from "@frontend/global/firebaseFunctionsUrl";
+import { chainProperties } from "@frontend/global/networkConstants";
 import {
   IQueueItem,
   ITransaction,
   ITxNotification,
   NotificationStatus,
-} from "@frontend/types"
+} from "@frontend/types";
 import {
   ArrowUpRightIcon,
   CircleArrowDownIcon,
   CircleArrowUpIcon,
-} from "@frontend/ui-components/CustomIcons"
-import LoadingModal from "@frontend/ui-components/LoadingModal"
-import queueNotification from "@frontend/ui-components/QueueNotification"
+} from "@frontend/ui-components/CustomIcons";
+import LoadingModal from "@frontend/ui-components/LoadingModal";
+import queueNotification from "@frontend/ui-components/QueueNotification";
 
-import SentInfo from "./SentInfo"
+import SentInfo from "./SentInfo";
 
 interface ITransactionProps {
-  status: "Approval" | "Cancelled" | "Executed"
-  date: Date
-  approvals: string[]
-  threshold: number
-  callData: string
-  callHash: string
-  note: string
-  refetch?: () => void
-  setQueuedTransactions?: React.Dispatch<React.SetStateAction<IQueueItem[]>>
-  numberOfTransactions: number
-  notifications?: ITxNotification
-  value: string
-  onAfterApprove?: any
-  onAfterExecute?: any
-  txType?: any
-  recipientAddress?: string
+  status: "Approval" | "Cancelled" | "Executed";
+  date: Date;
+  approvals: string[];
+  threshold: number;
+  callData: string;
+  callHash: string;
+  note: string;
+  refetch?: () => void;
+  setQueuedTransactions?: React.Dispatch<React.SetStateAction<IQueueItem[]>>;
+  numberOfTransactions: number;
+  notifications?: ITxNotification;
+  value: string;
+  onAfterApprove?: any;
+  onAfterExecute?: any;
+  txType?: any;
+  recipientAddress?: string;
 }
 
 const Transaction: FC<ITransactionProps> = ({
@@ -60,31 +60,31 @@ const Transaction: FC<ITransactionProps> = ({
   recipientAddress,
 }) => {
   const { activeMultisig, address, identityBackend } =
-    useGlobalUserDetailsContext()
-  const [loading, setLoading] = useState(false)
-  const [success, setSuccess] = useState(false)
-  const [failure, setFailure] = useState(false)
-  const [getMultiDataLoading] = useState(false)
-  const [loadingMessages, setLoadingMessage] = useState("")
-  const [openLoadingModal, setOpenLoadingModal] = useState(false)
+    useGlobalUserDetailsContext();
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [failure, setFailure] = useState(false);
+  const [getMultiDataLoading] = useState(false);
+  const [loadingMessages, setLoadingMessage] = useState("");
+  const [openLoadingModal, setOpenLoadingModal] = useState(false);
 
-  const [decodedCallData, setDecodedCallData] = useState<any>({})
+  const [decodedCallData, setDecodedCallData] = useState<any>({});
 
-  const navigate = useNavigate()
+  const navigate = useNavigate();
 
-  const [transactionInfoVisible, toggleTransactionVisible] = useState(false)
-  const [callDataString, setCallDataString] = useState<string>(callData || "")
+  const [transactionInfoVisible, toggleTransactionVisible] = useState(false);
+  const [callDataString, setCallDataString] = useState<string>(callData || "");
   const [transactionDetails, setTransactionDetails] = useState<ITransaction>(
     {} as any,
-  )
-  const token = ""
-  const location = useLocation()
-  const hash = location.hash.slice(1)
+  );
+  const token = "";
+  const location = useLocation();
+  const hash = location.hash.slice(1);
   const [transactionDetailsLoading, setTransactionDetailsLoading] =
-    useState<boolean>(false)
+    useState<boolean>(false);
 
   const getTransactionDetails = useCallback(async () => {
-    setTransactionDetailsLoading(true)
+    setTransactionDetailsLoading(true);
     const getTransactionDetailsRes = await fetch(
       `${FIREBASE_FUNCTIONS_URL}/getTransactionDetailsEth`,
       {
@@ -92,69 +92,69 @@ const Transaction: FC<ITransactionProps> = ({
 
         method: "POST",
       },
-    )
+    );
 
     const { data: getTransactionData, error: getTransactionErr } =
       (await getTransactionDetailsRes.json()) as {
-        data: ITransaction
-        error: string
-      }
+        data: ITransaction;
+        error: string;
+      };
     if (!getTransactionErr && getTransactionData) {
-      setTransactionDetails(getTransactionData)
+      setTransactionDetails(getTransactionData);
     }
-    setTransactionDetailsLoading(false)
-  }, [callHash])
+    setTransactionDetailsLoading(false);
+  }, [callHash]);
   useEffect(() => {
-    getTransactionDetails()
-  }, [getTransactionDetails])
+    getTransactionDetails();
+  }, [getTransactionDetails]);
 
   useEffect(() => {
-    if (!callData) return
+    if (!callData) return;
     // identityBackend.safeService
     //   .decodeData(callData)
     //   .then((res) => setDecodedCallData(res))
     //   .catch((e) => console.log(e));
-  }, [callData, identityBackend])
+  }, [callData, identityBackend]);
 
   const handleApproveTransaction = async () => {
-    setLoading(true)
+    setLoading(true);
     try {
       const response = await identityBackend.approveTransaction(
         "",
         activeMultisig,
         callHash,
-      )
+      );
       if (response) {
         const updateTx = {
           signer: address,
           txHash: callHash,
           txSignature: response,
-        }
+        };
         fetch(`${FIREBASE_FUNCTIONS_URL}/updateTransaction`, {
           body: JSON.stringify(updateTx),
           method: "POST",
-        })
-        onAfterApprove(callHash)
-        setSuccess(true)
-        setLoadingMessage("Transaction Signed Successfully.")
+        });
+        onAfterApprove(callHash);
+        setSuccess(true);
+        setLoadingMessage("Transaction Signed Successfully.");
         queueNotification({
           header: "Success!",
           message: "Transaction Approved",
           status: NotificationStatus.SUCCESS,
-        })
+        });
       }
     } catch (error) {
-      console.log(error)
-      setFailure(true)
-      setLoadingMessage("Something went wrong! Please try again.")
+      console.log(error);
+      setFailure(true);
+      setLoadingMessage("Something went wrong! Please try again.");
       queueNotification({
         header: "Error!",
         message: "Error in Approving the transaction",
         status: NotificationStatus.ERROR,
-      })
+      });
     }
-    setLoading(false)
-  }
+    setLoading(false);
+  };
 
   // const handleExecuteTransaction = async () => {
   //   setLoading(true);
@@ -225,7 +225,7 @@ const Transaction: FC<ITransactionProps> = ({
             ) : (
               <div
                 onClick={() => {
-                  toggleTransactionVisible(!transactionInfoVisible)
+                  toggleTransactionVisible(!transactionInfoVisible);
                 }}
                 className={classNames(
                   "grid items-center grid-cols-9 cursor-pointer text-white font-normal text-sm leading-[15px]",
@@ -234,8 +234,7 @@ const Transaction: FC<ITransactionProps> = ({
                 <p className="col-span-3 flex items-center gap-x-3">
                   <span
                     className={`flex items-center justify-center w-9 h-9 ${
-                      txType === "addOwnerWithThreshold" ||
-                      txType === "removeOwner"
+                      txType === "addOwner" || txType === "removeOwner"
                         ? "bg-[#FF79F2] text-[#FF79F2]"
                         : "bg-success text-red-500"
                     } bg-opacity-10 p-[10px] rounded-lg`}
@@ -244,7 +243,7 @@ const Transaction: FC<ITransactionProps> = ({
                   </span>
 
                   <span>
-                    {txType === "addOwnerWithThreshold"
+                    {txType === "addOwner"
                       ? "Adding New Owner"
                       : txType === "removeOwner"
                       ? "Removing Owner"
@@ -253,9 +252,7 @@ const Transaction: FC<ITransactionProps> = ({
                       : "Custom Transaction"}
                   </span>
                 </p>
-                {!(
-                  txType === "addOwnerWithThreshold" || txType === "removeOwner"
-                ) && (
+                {!(txType === "addOwner" || txType === "removeOwner") && (
                   <p className="col-span-2 flex items-center gap-x-[6px]">
                     {/* <ParachainIcon src={chainProperties[network].logo} /> */}
                     <span
@@ -270,8 +267,7 @@ const Transaction: FC<ITransactionProps> = ({
                 <p className="col-span-2">{dayjs(date).format("lll")}</p>
                 <p
                   className={`${
-                    txType === "addOwnerWithThreshold" ||
-                    txType === "removeOwner"
+                    txType === "addOw" || txType === "removeOwner"
                       ? "col-span-4"
                       : "col-span-2"
                   } flex items-center justify-end gap-x-4`}
@@ -351,7 +347,7 @@ const Transaction: FC<ITransactionProps> = ({
         </Collapse.Panel>
       </Collapse>
     </>
-  )
-}
+  );
+};
 
-export default Transaction
+export default Transaction;
