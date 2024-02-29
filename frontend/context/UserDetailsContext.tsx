@@ -19,6 +19,9 @@ import { EFieldType, IUser, UserDetailsContextType } from "@frontend/types";
 import { convertSafeMultisig } from "@frontend/utils/convertSafeData/convertSafeMultisig";
 
 import { useGlobalIdentityContext } from "./IdentityProviderContext";
+import useIcpVault from "@frontend/hooks/useIcpVault";
+import { VaultAgentContext } from "./IcpVaultAgentProvider";
+
 const initialUserDetailsContext: UserDetailsContextType = {
   activeMultisig: localStorage.getItem("active_multisig") || "",
   address: localStorage.getItem("address") || "",
@@ -29,15 +32,9 @@ const initialUserDetailsContext: UserDetailsContextType = {
   multisigAddresses: [],
   multisigSettings: {},
   notification_preferences: {},
-  setActiveMultisigData: (): void => {
-    throw new Error("setUserDetailsContextState function must be overridden");
-  },
   setIdentityBackend: (): void => {},
   setUserDetailsContextState: (): void => {
     throw new Error("setUserDetailsContextState function must be overridden");
-  },
-  updateCurrentMultisigData: (): void => {
-    throw new Error("updateCurrentMultisigData function must be overridden");
   },
   transactionFields: {
     ["expense_reimbursement"]: {
@@ -285,88 +282,60 @@ export function useGlobalUserDetailsContext() {
 export const UserDetailsProvider = ({
   children,
 }: React.PropsWithChildren<{}>) => {
-  const { account: address } = useGlobalIdentityContext();
+  const { principal: address } = useGlobalIdentityContext();
   const [userDetailsContextState, setUserDetailsContextState] = useState(
     initialUserDetailsContext,
   );
-  const [activeMultisigData, setActiveMultisigData] = useState<any>({});
   const navigate = useNavigate();
   const [identityBackend, setIdentityBackend] =
     useState<IdentityBackendService>({} as any);
+  const { icpVaultBackend } = useContext(VaultAgentContext);
+  const { get_all_vault_by_principle, get_address_book } = useIcpVault();
 
   const [loading, setLoading] = useState(false);
 
-  const connectAddress = useCallback(
-    async (address?: string, signature?: string) => {
-      setLoading(true);
-      const identityService = new IdentityBackendService();
-      setIdentityBackend(identityService);
-      const { data: userData, error: connectAddressErr } =
-        await identityService.getAllMultisigByOwner(address || "");
-      const { data: addressBook } = await identityService.getAddressBookOwner(
-        address || "",
-      );
-      if (!connectAddressErr && userData) {
-        setUserDetailsContextState((prevState) => {
-          return {
-            ...prevState,
-            activeMultisig:
-              localStorage.getItem("active_multisig") ||
-              userData?.[0]?.address ||
-              "",
-            addressBook: addressBook?.addressBook || [],
-            createdAt: userData?.created_at,
-            multisigAddresses: userData || [],
-            multisigSettings: {},
-            notification_preferences:
-              userData?.notification_preferences ||
-              initialUserDetailsContext.notification_preferences,
-            transactionFields: initialUserDetailsContext.transactionFields,
-          };
-        });
-      } else {
-        localStorage.clear();
-        setUserDetailsContextState(initialUserDetailsContext);
-        navigate("/");
-      }
-      setLoading(false);
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    },
-    [],
-  );
-
-  const updateCurrentMultisigData = useCallback(async () => {
-    if (
-      !userDetailsContextState.activeMultisig ||
-      !userDetailsContextState.multisigAddresses
-    ) {
+  const connectAddress = async () => {
+    if (!get_all_vault_by_principle && !get_address_book) {
       return;
     }
-    try {
-      let activeData: any = {};
-      const multisig = userDetailsContextState.multisigAddresses.find(
-        (multi) => multi.address === userDetailsContextState.activeMultisig,
-      );
-      if (!multisig) {
-        return;
-      }
-      if (!userDetailsContextState.activeMultisig) {
-        return;
-      }
-      const { data: multiData } =
-        await identityBackend.getMultisigInfoByAddress(
-          userDetailsContextState.activeMultisig,
-        );
-      setActiveMultisigData(multiData?.[0]);
-    } catch (err) {
-      console.log("err from update current multisig data", err);
+    setLoading(true);
+    const { data: userData, error: connectAddressErr } =
+      await get_all_vault_by_principle();
+
+    console.log("all vault", userData);
+    const { data: addressBook } = await get_address_book(address);
+
+    if (!connectAddressErr && userData) {
+      const allMultisigData = userData?.map((a) => {
+        const multisig = a.multisig?.[0];
+        const data = {
+          name: multisig?.name,
+          threshold: Number(multisig?.threshold),
+          signatories: multisig?.signers?.flat().map((a) => a.toText?.()),
+        };
+        return { address: a.address, ...data };
+      });
+      setUserDetailsContextState((prevState) => {
+        return {
+          ...prevState,
+          activeMultisig: userData?.[0]?.address || "",
+          addressBook: addressBook || [],
+          createdAt: userData?.created_at,
+          multisigAddresses: allMultisigData || [],
+          multisigSettings: {},
+          notification_preferences:
+            userData?.notification_preferences ||
+            initialUserDetailsContext.notification_preferences,
+          transactionFields: initialUserDetailsContext.transactionFields,
+        };
+      });
+    } else {
+      localStorage.clear();
+      setUserDetailsContextState(initialUserDetailsContext);
+      navigate("/");
     }
-  }, [
-    identityBackend,
-    userDetailsContextState.activeMultisig,
-    userDetailsContextState.address,
-    userDetailsContextState.multisigAddresses,
-  ]);
+    setLoading(false);
+  };
 
   useEffect(() => {
     if (!address) {
@@ -391,26 +360,23 @@ export const UserDetailsProvider = ({
   }, [address]);
 
   useEffect(() => {
-    if (!userDetailsContextState.activeMultisig) {
+    if (!address && !icpVaultBackend) {
       return;
     }
-    updateCurrentMultisigData();
-  }, [updateCurrentMultisigData, userDetailsContextState.activeMultisig]);
-  console.log(activeMultisigData);
+    connectAddress();
+  }, [address, icpVaultBackend]);
+
   return (
     <UserDetailsContext.Provider
       value={{
-        activeMultisigData,
         connectAddress,
         loading,
         ...userDetailsContextState,
         address,
         identityBackend,
-        setActiveMultisigData,
         setIdentityBackend,
         setLoading,
         setUserDetailsContextState,
-        updateCurrentMultisigData,
       }}
     >
       <>{children}</>

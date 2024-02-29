@@ -26,10 +26,11 @@ import LoadingModal from "@frontend/ui-components/LoadingModal";
 import queueNotification from "@frontend/ui-components/QueueNotification";
 
 import SentInfo from "./SentInfo";
+import useIcpVault from "@frontend/hooks/useIcpVault";
 
 interface ITransactionProps {
   status: "Approval" | "Cancelled" | "Executed";
-  date: Date;
+  date: number;
   approvals: string[];
   threshold: number;
   callData: string;
@@ -44,6 +45,7 @@ interface ITransactionProps {
   onAfterExecute?: any;
   txType?: any;
   recipientAddress?: string;
+  owner: string;
 }
 
 const Transaction: FC<ITransactionProps> = ({
@@ -58,6 +60,7 @@ const Transaction: FC<ITransactionProps> = ({
   onAfterExecute,
   txType,
   recipientAddress,
+  owner,
 }) => {
   const { activeMultisig, address, identityBackend } =
     useGlobalUserDetailsContext();
@@ -68,79 +71,42 @@ const Transaction: FC<ITransactionProps> = ({
   const [loadingMessages, setLoadingMessage] = useState("");
   const [openLoadingModal, setOpenLoadingModal] = useState(false);
 
-  const [decodedCallData, setDecodedCallData] = useState<any>({});
-
   const navigate = useNavigate();
 
   const [transactionInfoVisible, toggleTransactionVisible] = useState(false);
   const [callDataString, setCallDataString] = useState<string>(callData || "");
-  const [transactionDetails, setTransactionDetails] = useState<ITransaction>(
-    {} as any,
-  );
-  const token = "";
+  const token = "ICP";
   const location = useLocation();
   const hash = location.hash.slice(1);
   const [transactionDetailsLoading, setTransactionDetailsLoading] =
     useState<boolean>(false);
 
-  const getTransactionDetails = useCallback(async () => {
-    setTransactionDetailsLoading(true);
-    const getTransactionDetailsRes = await fetch(
-      `${FIREBASE_FUNCTIONS_URL}/getTransactionDetailsEth`,
-      {
-        body: JSON.stringify({ callHash }),
-
-        method: "POST",
-      },
-    );
-
-    const { data: getTransactionData, error: getTransactionErr } =
-      (await getTransactionDetailsRes.json()) as {
-        data: ITransaction;
-        error: string;
-      };
-    if (!getTransactionErr && getTransactionData) {
-      setTransactionDetails(getTransactionData);
-    }
-    setTransactionDetailsLoading(false);
-  }, [callHash]);
-  useEffect(() => {
-    getTransactionDetails();
-  }, [getTransactionDetails]);
-
-  useEffect(() => {
-    if (!callData) return;
-    // identityBackend.safeService
-    //   .decodeData(callData)
-    //   .then((res) => setDecodedCallData(res))
-    //   .catch((e) => console.log(e));
-  }, [callData, identityBackend]);
+  const { approve_transaction } = useIcpVault();
 
   const handleApproveTransaction = async () => {
     setLoading(true);
     try {
-      const response = await identityBackend.approveTransaction(
-        "",
+      console.log(activeMultisig, callHash);
+      const { data, error } = await approve_transaction(
         activeMultisig,
         callHash,
       );
-      if (response) {
-        const updateTx = {
-          signer: address,
-          txHash: callHash,
-          txSignature: response,
-        };
-        fetch(`${FIREBASE_FUNCTIONS_URL}/updateTransaction`, {
-          body: JSON.stringify(updateTx),
-          method: "POST",
-        });
-        onAfterApprove(callHash);
+      if (data && !error) {
+        console.log(data);
         setSuccess(true);
+        onAfterApprove(callHash);
         setLoadingMessage("Transaction Signed Successfully.");
         queueNotification({
           header: "Success!",
           message: "Transaction Approved",
           status: NotificationStatus.SUCCESS,
+        });
+      }
+      if (error) {
+        queueNotification({
+          header: "Error!",
+          message: "Error in Approving the transaction",
+          status: NotificationStatus.ERROR,
         });
       }
     } catch (error) {
@@ -155,59 +121,6 @@ const Transaction: FC<ITransactionProps> = ({
     }
     setLoading(false);
   };
-
-  // const handleExecuteTransaction = async () => {
-  //   setLoading(true);
-  //   try {
-  //     const { data: response, error } = await identityBackend.executeTx(
-  //       callHash,
-  //       activeMultisig
-  //     );
-  //     if (error) {
-  //       queueNotification({
-  //         header: "Execution Failed",
-  //         message: "Please try Again",
-  //         status: NotificationStatus.ERROR,
-  //       });
-  //     }
-  //     if (response) {
-  //       queueNotification({
-  //         header: "Execution started",
-  //         message: "Your transaction is executing, it might take a bit time.",
-  //         status: NotificationStatus.INFO,
-  //       });
-  //       await response.transactionResponse?.wait();
-  //       const completeTx = {
-  //         receipt: response || {},
-  //         txHash: callHash,
-  //       };
-  //       fetch(`${FIREBASE_FUNCTIONS_URL}/completeTransactionEth`, {
-  //         body: JSON.stringify(completeTx),
-  //         headers: firebaseFunctionsHeader(network),
-  //         method: "POST",
-  //       });
-  //       onAfterExecute(callHash);
-  //       queueNotification({
-  //         header: "Transaction Executed",
-  //         message: "Your transaction has been executed successfully.",
-  //         status: NotificationStatus.SUCCESS,
-  //       });
-  //       setSuccess(true);
-  //       if (txType === "addOwnerWithThreshold" || txType === "removeOwner")
-  //         navigate("/");
-  //     }
-  //   } catch (error) {
-  //     console.log(error);
-  //     setFailure(true);
-  //     setLoadingMessage("Something went wrong! Please try again.");
-  //     queueNotification({
-  //       header: "Something went wrong! Please try again.",
-  //       message: error.message || error,
-  //       status: NotificationStatus.ERROR,
-  //     });
-  //   }
-  //   setLoading(false);
-  // };
 
   return (
     <>
@@ -241,16 +154,7 @@ const Transaction: FC<ITransactionProps> = ({
                   >
                     <ArrowUpRightIcon />
                   </span>
-
-                  <span>
-                    {txType === "addOwner"
-                      ? "Adding New Owner"
-                      : txType === "removeOwner"
-                      ? "Removing Owner"
-                      : txType === "Sent" || txType === "transfer"
-                      ? "Sent"
-                      : "Custom Transaction"}
-                  </span>
+                  <span>Sent</span>
                 </p>
                 {!(txType === "addOwner" || txType === "removeOwner") && (
                   <p className="col-span-2 flex items-center gap-x-[6px]">
@@ -260,11 +164,13 @@ const Transaction: FC<ITransactionProps> = ({
                         "font-normal text-xs leading-[13px] text-failure"
                       }
                     >
-                      {transactionDetails.amount_token || value} {token}
+                      {value} {token}
                     </span>
                   </p>
                 )}
-                <p className="col-span-2">{dayjs(date).format("lll")}</p>
+                <p className="col-span-2">
+                  {dayjs(date).format("YYYY-MM-DD HH:mm:ss")}
+                </p>
                 <p
                   className={`${
                     txType === "addOw" || txType === "removeOwner"
@@ -301,47 +207,31 @@ const Transaction: FC<ITransactionProps> = ({
           <div>
             <Divider className="bg-text_secondary my-5" />
             <SentInfo
-              amount={
-                decodedCallData.method === "multiSend"
-                  ? decodedCallData?.parameters?.[0]?.valueDecoded?.map(
-                      (item: any) => item.value,
-                    )
-                  : value
-              }
-              addressAddOrRemove={
-                txType === "addOwnerWithThreshold"
-                  ? decodedCallData.parameters?.[0]?.value
-                  : txType === "removeOwner"
-                  ? decodedCallData.parameters?.[1]?.value
-                  : ""
-              }
+              amount={value}
+              addressAddOrRemove={""}
               callHash={callHash}
               callDataString={callDataString}
               callData={callData}
-              date={date}
+              date={dayjs(date).format("YYYY-MM-DD HH:mm:ss")}
               approvals={approvals}
               threshold={threshold}
               loading={loading}
               getMultiDataLoading={getMultiDataLoading}
-              recipientAddress={
-                decodedCallData.method === "multiSend"
-                  ? decodedCallData?.parameters?.[0]?.valueDecoded?.map(
-                      (item: any) => item.to,
-                    )
-                  : recipientAddress || ""
-              }
+              recipientAddress={recipientAddress}
               setCallDataString={setCallDataString}
               handleApproveTransaction={handleApproveTransaction}
+              handleExecuteTransaction={() => {}}
               handleCancelTransaction={async () => {}}
-              note={transactionDetails.note || ""}
+              note={""}
               isProxyApproval={false}
               isProxyAddApproval={false}
               delegate_id={""}
               isProxyRemovalApproval={false}
               notifications={notifications}
               txType={txType}
-              transactionFields={transactionDetails.transactionFields}
+              transactionFields={null}
               transactionDetailsLoading={transactionDetailsLoading}
+              owner={owner}
             />
           </div>
         </Collapse.Panel>

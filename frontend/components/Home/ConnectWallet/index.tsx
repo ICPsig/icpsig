@@ -7,13 +7,11 @@ import React, { useCallback, useEffect, useState } from "react";
 import ConnectWalletImg from "@frontend/assets/connect-wallet.svg";
 import { useGlobalIdentityContext } from "@frontend/context/IdentityProviderContext";
 import { useGlobalUserDetailsContext } from "@frontend/context/UserDetailsContext";
-import { firebaseFunctionsHeader } from "@frontend/global/firebaseFunctionsHeader";
 import { FIREBASE_FUNCTIONS_URL } from "@frontend/global/firebaseFunctionsUrl";
-import { IUser } from "@frontend/types";
 import { WarningCircleIcon } from "@frontend/ui-components/CustomIcons";
 
 const ConnectWallet = () => {
-  const { identity, login, setAccounts, account, setPrincipal } =
+  const { identity, login, setAccounts, account, setPrincipal, setAgent } =
     useGlobalIdentityContext();
   const [loading, setLoading] = useState<boolean>(false);
   const { connectAddress } = useGlobalUserDetailsContext();
@@ -21,41 +19,22 @@ const ConnectWallet = () => {
   const [authCode, setAuthCode] = useState<number>();
   const [tokenExpired, setTokenExpired] = useState<boolean>(false);
 
-  const handlePolkasafeLogin = async () => {
-    const res = await fetch(`${FIREBASE_FUNCTIONS_URL}/login`, {
-      body: JSON.stringify({ account }),
-      headers: {
-        "Content-Type": "application/json",
-      },
-      method: "POST",
-    });
-    const { token } = await res.json();
-  };
-
-  const handleLoginByInternetIdentity = useCallback(async () => {
+  const handleLoginByInternetIdentity = async () => {
     try {
       setLoading(true);
-      if (!identity) {
-        login();
-        connectAddress();
-        setLoading(false);
-        return;
-      }
+      await login();
     } catch (err) {
       console.log(err);
     }
     setLoading(false);
-  }, []);
+  };
 
   const handleLoginByPlug = async () => {
     //@ts-ignore
     const icWidnowObject = window.ic.plug;
-
-    if (icWidnowObject?.sessionManager?.sessionData) {
-      return;
-    }
     const whitelist = [];
     const host = "https://mainnet.dfinity.network";
+
     //@ts-ignore
     const onConnectionUpdate = async () => {};
 
@@ -66,50 +45,55 @@ const ConnectWallet = () => {
         onConnectionUpdate,
         timeout: 100000,
       });
-      const principal = icWidnowObject.sessionManager.sessionData.principalId;
       const account = icWidnowObject.sessionManager.sessionData.accountId;
-
-      setPrincipal(principal);
+      const agent = icWidnowObject.sessionManager.sessionData.agent;
+      icWidnowObject.sessionManager.sessionData;
+      console.log(icWidnowObject.sessionManager.sessionData);
+      setPrincipal("2vxsx-fae");
       setAccounts(account);
       // backend call for checking if identity has 2fa enabled (if yes -> call handleSubmitAuthCode)
-      localStorage.setItem("principal", principal);
+      localStorage.setItem("principal", "2vxsx-fae");
       localStorage.setItem("address", account);
-      connectAddress(account);
+      console.log(agent);
+      setAgent(agent);
+      connectAddress();
     } catch (e) {
       console.log(e);
     }
   };
 
   const handleSubmitAuthCode = async () => {
-    if (!tfaToken) return;
-
-    setLoading(true);
-    try {
-      // api call for validate 2fa auth code from authenticator app
-      const { data: token, error: validate2FAError } = await (
-        await fetch(`api/2fa/validate2FA`, {
-          headers: {
-            authCode: JSON.stringify(authCode),
-            tfa_token: tfaToken,
-          },
-          body: JSON.stringify({ address: "" }),
-        })
-      ).json();
-
-      if (validate2FAError) {
-        if (validate2FAError === "2FA token expired.") {
-          setTokenExpired(true);
-        }
-        setLoading(false);
-      }
-
-      if (!validate2FAError && token) {
-        handleLoginByPlug();
-      }
-    } catch (error) {
-      console.log(error);
-      setLoading(false);
-    }
+    // if (!tfaToken) return;
+    // setLoading(true);
+    // try {
+    // api call for validate 2fa auth code from authenticator app
+    // const { data: token, error: validate2FAError } = await (
+    //   await fetch(`api/2fa/validate2FA`, {
+    //     headers: {
+    //       authCode: JSON.stringify(authCode),
+    //       tfa_token: tfaToken,
+    //     },
+    //     body: JSON.stringify({ address: "" }),
+    //   })
+    // ).json();
+    // if (validate2FAError) {
+    //   if (validate2FAError === "2FA token expired.") {
+    //     setTokenExpired(true);
+    //   }
+    // }
+    //   setTimeout(() => {
+    //     setPrincipal(pState);
+    //     setAccounts(aState);
+    //     // backend call for checking if identity has 2fa enabled (if yes -> call handleSubmitAuthCode)
+    //     localStorage.setItem("principal", pState);
+    //     localStorage.setItem("address", aState);
+    //     connectAddress(aState);
+    //     setLoading(false);
+    //   }, 3500);
+    // } catch (error) {
+    //   console.log(error);
+    //   setLoading(false);
+    // }
   };
 
   return (
@@ -204,7 +188,7 @@ const ConnectWallet = () => {
               >
                 Sign In by internet identity
               </Button>
-              <Button
+              {/* <Button
                 onClick={handleLoginByPlug}
                 loading={loading}
                 className={
@@ -212,7 +196,7 @@ const ConnectWallet = () => {
                 }
               >
                 Sign In by plug wallet
-              </Button>
+              </Button> */}
             </div>
           </>
         )}

@@ -28,6 +28,7 @@ import SuccessTransactionLottie from "@frontend/ui-components/lottie-graphics/Su
 import FailedTransactionLottie from "@frontend/ui-components/lottie-graphics/FailedTransaction";
 import LoadingLottie from "@frontend/ui-components/lottie-graphics/Loading";
 import { useGlobalIdentityContext } from "@frontend/context/IdentityProviderContext";
+import useIcpVault from "@frontend/hooks/useIcpVault";
 
 interface IMultisigProps {
   className?: string;
@@ -54,7 +55,7 @@ const CreateMultisig: React.FC<IMultisigProps> = ({
 
   const [multisigName, setMultisigName] = useState<string>("");
   const [threshold, setThreshold] = useState<number>(2);
-  const [signatories, setSignatories] = useState<string[]>([userAddress]);
+  const [signatories, setSignatories] = useState<[string]>([userAddress]);
   const { identityBackend } = useGlobalUserDetailsContext();
 
   const [loading, setLoading] = useState<boolean>(false);
@@ -64,23 +65,18 @@ const CreateMultisig: React.FC<IMultisigProps> = ({
   const [addAddress, setAddAddress] = useState<string>("");
   const [showAddressModal, setShowAddressModal] = useState<boolean>(false);
   const [form] = Form.useForm();
-
-  const [createMultisigData, setCreateMultisigData] =
-    useState<IMultisigAddress>({} as any);
+  const { create_vault } = useIcpVault();
 
   const handleMultisigCreate = async () => {
     setLoading(true);
     try {
-      const multisigSignatories = signatories
-        .filter((a) => a)
-        .map((a) => a.substring(2));
-      const { data: multisigData, error: multisigError } =
-        await identityBackend.createMultisig(
-          multisigSignatories as [string],
-          threshold,
-          multisigName,
-          address,
-        );
+      console.log(signatories);
+      const { data: multisigData, error: multisigError } = await create_vault(
+        multisigName,
+        signatories,
+        BigInt(threshold),
+      );
+      console.log(multisigData);
 
       if (!multisigData) {
         queueNotification({
@@ -105,50 +101,38 @@ const CreateMultisig: React.FC<IMultisigProps> = ({
       }
 
       if (multisigData) {
-        if (
-          multisigAddresses?.some(
-            (item: any) =>
-              item.address === multisigData.address && !item.disabled,
-          )
-        ) {
-          queueNotification({
-            header: "Multisig Exist!",
-            message: "Please try adding a different multisig.",
-            status: NotificationStatus.WARNING,
-          });
-          setLoading(false);
-          setUserDetailsContextState((prev) => ({
-            ...prev,
-            activeMultisig: multisigData.address || prev.activeMultisig,
-          }));
-          return;
-        }
         queueNotification({
           header: "Success!",
           message: `Your Multisig ${multisigName} has been created successfully!`,
           status: NotificationStatus.SUCCESS,
         });
-        setCreateMultisigData(multisigData);
+        const { address, multisig } = multisigData;
+        const data = {
+          address,
+          ...{
+            name: multisig?.name,
+            threshold: Number(multisig?.threshold),
+            signatories: multisig?.signers?.flat().map((a) => a.toText?.()),
+          },
+        };
+        console.log(data);
         onCancel?.();
-        setUserDetailsContextState((prevState) => {
+        setUserDetailsContextState((prevState: any) => {
           return {
             ...prevState,
-            activeMultisig: multisigData.address,
-            multisigAddresses: [
-              ...(prevState?.multisigAddresses || []),
-              multisigData,
-            ],
+            activeMultisig: data.address,
+            multisigAddresses: [...(prevState?.multisigAddresses || []), data],
             multisigSettings: {
               ...prevState.multisigSettings,
-              [`${multisigData.address}_${multisigData.network}`]: {
-                name: multisigData.name,
+              [`${data.address}`]: {
+                name: data.name,
                 deleted: false,
               },
             },
           };
         });
         const records: { [address: string]: ISharedAddressBookRecord } = {};
-        multisigData.signatories.forEach((signatory: any) => {
+        data.signatories.forEach((signatory: any) => {
           const data = addressBook.find((a) => a.address === signatory);
           records[signatory] = {
             address: signatory,
@@ -162,7 +146,7 @@ const CreateMultisig: React.FC<IMultisigProps> = ({
         setActiveMultisigContextState((prev) => ({
           ...prev,
           records,
-          multisig: multisigData.address,
+          multisig: data.address,
         }));
       }
     } catch (error) {
@@ -287,16 +271,12 @@ const CreateMultisig: React.FC<IMultisigProps> = ({
                   validateStatus={signatories.length < 2 ? "error" : "success"}
                 >
                   <div className="w-full flex items-center justify-between">
-                    {!uploadSignatoriesJson ? (
-                      <Signatory
-                        homepage={homepage}
-                        filterAddress={addAddress}
-                        setSignatories={setSignatories}
-                        signatories={signatories}
-                      />
-                    ) : (
-                      <DragDrop setSignatories={setSignatories} />
-                    )}
+                    <Signatory
+                      homepage={homepage}
+                      filterAddress={addAddress}
+                      setSignatories={setSignatories}
+                      signatories={signatories}
+                    />
                     <DashDotIcon className="mt-5" />
                     <div className="w-[40%] overflow-auto">
                       <br />

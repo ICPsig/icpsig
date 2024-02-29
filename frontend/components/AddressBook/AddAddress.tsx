@@ -26,6 +26,7 @@ import {
 import queueNotification from "@frontend/ui-components/QueueNotification";
 import styled from "styled-components";
 import { useGlobalIdentityContext } from "@frontend/context/IdentityProviderContext";
+import useIcpVault from "@frontend/hooks/useIcpVault";
 
 interface IMultisigProps {
   className?: string;
@@ -91,13 +92,11 @@ const AddAddress: React.FC<IMultisigProps> = ({
   setAddAddress,
   className,
 }) => {
-  const { account: ownerAddress } = useGlobalIdentityContext();
   const {
     addressBook,
     activeMultisig,
     multisigAddresses,
     setUserDetailsContextState,
-    identityBackend,
   } = useGlobalUserDetailsContext();
 
   const [address, setAddress] = useState<string>(addAddress || "");
@@ -111,6 +110,7 @@ const AddAddress: React.FC<IMultisigProps> = ({
   const [discord, setDiscord] = useState<string>("");
   const [telegram, setTelegram] = useState<string>("");
   const [shared, setShared] = useState<boolean>(activeMultisig ? true : false);
+  const { add_address_to_address_book } = useIcpVault();
 
   const [openConfirmationModal, setOpenConfirmationModal] =
     useState<boolean>(false);
@@ -157,19 +157,16 @@ const AddAddress: React.FC<IMultisigProps> = ({
         return;
       }
 
-      const { data: addAddressResponse, error: addAddressError } =
-        await identityBackend.addAddressToAddressBook(ownerAddress, {
+      const { data: addAddressData, error: addAddressError } =
+        await add_address_to_address_book(
           address,
-          discord,
-          email,
           name,
-          nickName,
-          roles,
           telegram,
-        });
-      console.log(addAddressResponse, addAddressError);
-
-      const addAddressData = addAddressResponse.addressBook;
+          email,
+          discord,
+          roles?.[0],
+        );
+      console.log(addAddressData, addAddressError);
 
       if (addAddressError) {
         queueNotification({
@@ -226,14 +223,16 @@ const AddAddress: React.FC<IMultisigProps> = ({
         return;
       }
 
-      const { data: addAddressData, error: addAddressError } =
-        (await identityBackend.add_address_to_address_book(
-          activeMultisig,
+      const { data: addAddressResponse, error: addAddressError } =
+        await add_address_to_address_book(
           address,
-        )) as {
-          data: [string];
-          error: string;
-        };
+          name,
+          telegram,
+          email,
+          discord,
+          roles?.[0],
+        );
+      console.log(addAddressResponse, addAddressError);
 
       if (addAddressError) {
         queueNotification({
@@ -245,38 +244,11 @@ const AddAddress: React.FC<IMultisigProps> = ({
         return;
       }
 
-      if (addAddressData) {
+      if (addAddressResponse) {
         setUserDetailsContextState((prevState) => {
           return {
             ...prevState,
-            addressBook: addAddressData.map((a) => ({
-              address: a,
-              name: DEFAULT_ADDRESS_NAME,
-            })),
-          };
-        });
-
-        const copyAddressBook = [...addressBook];
-        const updateIndex = copyAddressBook.findIndex(
-          (item) => item.address === address,
-        );
-        if (updateIndex > -1) {
-          copyAddressBook[updateIndex].nickName = nickName;
-        } else {
-          copyAddressBook.push({
-            address: address,
-            discord,
-            email,
-            name,
-            nickName,
-            roles,
-            telegram,
-          });
-        }
-        setUserDetailsContextState((prev) => {
-          return {
-            ...prev,
-            addressBook: copyAddressBook,
+            addressBook: addAddressResponse,
           };
         });
 
@@ -318,24 +290,6 @@ const AddAddress: React.FC<IMultisigProps> = ({
         <Form
           className={`${className} add-address my-0 w-[560px] max-h-[75vh] px-2 overflow-y-auto`}
         >
-          {activeMultisig && (
-            <section className="mb-4 text-[13px] w-full text-waiting bg-waiting bg-opacity-10 p-2.5 rounded-lg font-normal flex items-center gap-x-2">
-              <WarningCircleIcon />
-              <div>
-                <p className="mb-1">
-                  This will update the Address book for every signatory, if you
-                  want to add only in your personal Address book, then deselect
-                </p>
-                <Checkbox
-                  className="text-white m-0 [&>span>span]:border-primary"
-                  checked={shared}
-                  onChange={(e) => setShared(e.target.checked)}
-                >
-                  Save for All
-                </Checkbox>
-              </div>
-            </section>
-          )}
           <div className="flex flex-col gap-y-3">
             <label
               className="text-primary text-xs leading-[13px] font-normal"
@@ -360,15 +314,6 @@ const AddAddress: React.FC<IMultisigProps> = ({
                 onChange={(e) => setName(e.target.value)}
                 value={name}
               />
-              {!showNickNameField && (
-                <Button
-                  onClick={() => setShowNickNameField(true)}
-                  icon={<PlusCircleOutlined className="text-primary" />}
-                  className="bg-transparent p-0 border-none outline-none text-primary text-sm flex items-center"
-                >
-                  Add Nickname
-                </Button>
-              )}
             </Form.Item>
           </div>
           {showNickNameField && (

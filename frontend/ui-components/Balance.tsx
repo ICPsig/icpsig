@@ -5,6 +5,8 @@
 import React, { useEffect, useState } from "react";
 
 import Loader from "./Loader";
+import useIcpVault from "@frontend/hooks/useIcpVault";
+import convertE8sToNumber from "@frontend/utils/convertE8sToNumber";
 
 interface Props {
   className?: string;
@@ -13,27 +15,21 @@ interface Props {
   isCkbtc?: boolean;
 }
 
-export const mainBalance = {
-  nxye5n3j1j05iu2da1a5s6c7qrau662be99l65v6tu43fq5fnpdcv9q5lqyqv4ab: 3.5,
-};
-
-const Balance = ({ address, className, isCkbtc }: Props) => {
+const Balance = ({ address, className, onChange, isCkbtc }: Props) => {
   const [balance, setBalance] = useState<string>("0");
   const [loading, setLoading] = useState<boolean>(false);
+  const { get_multisig_balance } = useIcpVault();
 
   const fetchEthBalance = async (address: string) => {
     try {
       setLoading(true);
-      setTimeout(() => {
-        setLoading(false);
-      }, 1000);
-      //@ts-ignore
-      // const allTokens = await window.ic.plug.requestBalance();
-      // const balance = allTokens.find(
-      //   (token: any) => token.symbol === "ICP",
-      // ).amount;
-      // console.log(balance);
-      if (balance) setBalance(balance);
+      const { data, error } = await get_multisig_balance(address);
+      if (data && !error) {
+        setBalance(convertE8sToNumber(data.e8s));
+        onChange(convertE8sToNumber(data.e8s));
+      }
+      setLoading(false);
+      // if (balance) setBalance(balance);
     } catch (err) {
       console.log("Err from fetchEthBalance", err);
     }
@@ -49,13 +45,7 @@ const Balance = ({ address, className, isCkbtc }: Props) => {
       className={`bg-highlight rounded-lg px-[10px] py-[6px] ml-auto font-normal text-xs leading-[13px] flex items-center justify-center ${className}`}
     >
       <span className="text-primary mr-2">Balance: </span>
-      {loading ? (
-        <Loader />
-      ) : (
-        <span className="text-white">
-          {parseFloat(isCkbtc ? 0 : mainBalance?.[address] || 0).toFixed(3)}
-        </span>
-      )}
+      {loading ? <Loader /> : <span className="text-white">{balance}</span>}
     </div>
   );
 };

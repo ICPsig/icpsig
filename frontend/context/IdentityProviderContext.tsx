@@ -1,9 +1,8 @@
 // Copyright 2022-2023 @Polkasafe/polkaSafe-ui authors & contributors
 // This software may be modified and distributed under the terms
 // of the Apache-2.0 license. See the LICENSE file for details.
-import { Identity } from "@dfinity/agent";
+import { HttpAgent, Identity } from "@dfinity/agent";
 import { AuthClient } from "@dfinity/auth-client";
-import { AccountIdentifier } from "@dfinity/nns";
 import React, { useContext, useEffect, useState } from "react";
 
 export const OLD_MAINNET_IDENTITY_SERVICE_URL = "https://identity.ic0.app";
@@ -24,6 +23,10 @@ export interface IdentityContextType {
   setAccounts: any;
   setPrincipal: any;
   identity: any;
+  setAuthClient: any;
+  setIdentity: any;
+  agent: HttpAgent;
+  setAgent: any;
 }
 
 export const IdentityContext: React.Context<IdentityContextType> =
@@ -40,6 +43,7 @@ export function IdentityContextProvider({
   const [account, setAccounts] = useState<string>("");
   const [authClient, setAuthClient] = useState<any>(null);
   const [identity, setIdentity] = useState<Identity>(null);
+  const [agent, setAgent] = useState<HttpAgent>();
 
   const handleConnect = async () => {
     authClient.login({
@@ -48,6 +52,8 @@ export function IdentityContextProvider({
       maxTimeToLive: BigInt(7 * 24 * 60 * 60 * 1000 * 1000 * 1000),
       onSuccess: async () => {
         const identity = (await authClient.getIdentity()) as Identity;
+        const agent = new HttpAgent({ identity: identity });
+        setAgent(agent);
         setIdentity(identity);
         const principal = identity.getPrincipal().toText();
         const account = identity.getPrincipal().toHex();
@@ -61,6 +67,15 @@ export function IdentityContextProvider({
 
   useEffect(() => {
     if (authClient) {
+      authClient.getIdentity().then((identity: Identity) => {
+        const agent = new HttpAgent({ identity: identity });
+        setAgent(agent);
+        setIdentity(identity);
+        const principal = identity.getPrincipal().toText();
+        const account = identity.getPrincipal().toHex();
+        setPrincipal(principal);
+        setAccounts(account);
+      });
       return;
     }
     AuthClient.create().then((res: any) => {
@@ -82,6 +97,10 @@ export function IdentityContextProvider({
         identity,
         setAccounts,
         setPrincipal,
+        setAuthClient,
+        setIdentity,
+        agent,
+        setAgent,
       }}
     >
       {children}

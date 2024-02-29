@@ -3,6 +3,7 @@ import RBTree "mo:base/RBTree";
 import Int "mo:base/Int";
 import Error "mo:base/Error";
 import HashMap "mo:base/HashMap";
+import Hash "mo:base/Hash";
 import List "mo:base/List";
 import Nat64 "mo:base/Nat64";
 import Option "mo:base/Option";
@@ -16,22 +17,34 @@ import XorShift "mo:rand/XorShift";
 import Source "mo:ulid/Source";
 import ULID "mo:ulid/ULID";
 import Debug "mo:base/Debug";
-
+import Ledger_ICP "canister:icp_ledger_canister";
 import Token "./Token";
 import Types "./Types";
 import Adapter "./Adapter";
+import Account "./Account";
 import Blob "mo:base/Blob";
+import Bool "mo:base/Bool";
+import AccountIdentifierBlob "mo:principal/blob/AccountIdentifier";
 
 shared ({ caller = installer_ }) actor class Multisig() = this {
 
   public type Signers = List.List<Principal>;
 
-  public type AddressBook = List.List<Principal>;
+  public type AddressBook = {
+    name: Text;
+    address: Text;
+    telegram: Text;
+    email: Text;
+    discord: Text;
+    role: Text;
+  };
 
   public type Vault = {
+    name: Text;
     signers : Signers;
     threshold : Nat;
     created_at : Int;
+    admin: Principal
   };
 
   public type Transaction = {
@@ -48,19 +61,16 @@ shared ({ caller = installer_ }) actor class Multisig() = this {
 
   // var transactions : RBTree.RBTree<Text, Transaction> = RBTree.RBTree<Text, Transaction>(Text.compare);
 
-  var transactions : HashMap.HashMap<Text, Transaction> = HashMap.HashMap(10, Text.equal, Text.hash);
-
-  var vault_transations : HashMap.HashMap<Text, List.List<Text>> = HashMap.HashMap(10, Text.equal, Text.hash);
-
-  var vaults_map : HashMap.HashMap<Text, Vault> = HashMap.HashMap(10, Text.equal, Text.hash);
-
-  var signer_vaults : HashMap.HashMap<Principal, List.List<Text>> = HashMap.HashMap(10, Principal.equal, Principal.hash);
-
-  var address_book : HashMap.HashMap<Principal, AddressBook> = HashMap.HashMap(10, Principal.equal, Principal.hash);
+  stable var transactions : Trie.Trie<Text, Transaction> = Trie.empty();
+  stable var vault_transations : Trie.Trie<Text, List.List<Text>> = Trie.empty();
+  stable var vaults_map : Trie.Trie<Text, Vault> = Trie.empty();
+  stable var vaults_ids_map : Trie.Trie<Text, Text> = Trie.empty();
+  stable var signer_vaults : Trie.Trie<Principal, List.List<Text>> = Trie.empty();
+  stable var address_book : Trie.Trie<Principal, List.List<AddressBook>> = Trie.empty();
 
   let icp_ledger_canister = "ryjl3-tyaaa-aaaaa-aaaba-cai";
 
-  let Ledger_ICP: Types.Actor = actor (icp_ledger_canister);
+  // let Ledger_ICP: Types.Actor = actor (icp_ledger_canister);
 
   /** Source of entropy for substantiating ULID multisig ids. */
   let idCreationEntropy_ = Source.Source(XorShift.toReader(XorShift.XorShift64(null)), 0);
@@ -76,7 +86,7 @@ shared ({ caller = installer_ }) actor class Multisig() = this {
   func fetch_transaction_from_id(transactionIdList: List.List<Text>): [Transaction] {
 
     let newList = List.map(transactionIdList, func (transactionId: Text): Transaction {
-      switch(transactions.get(transactionId)){
+      switch(Trie.get(transactions, textKey(transactionId), Text.equal)){
         case null{
           return {
             id  = " ";
@@ -99,142 +109,235 @@ shared ({ caller = installer_ }) actor class Multisig() = this {
     return List.toArray(newList);
   };
 
-  func transfer_icrc1(
-    vault : Text,
-    destination : Text,
-    amount : Nat,
-    caller: Principal,
-  ) : async Result.Result<(), Text> {
+  // func transfer_icrc1(
+  //   vault : Text,
+  //   destination : Text
+  // ) : async Result.Result<Nat, Text> {
 
-    let canister_subaccount = await get_blob_from_account_id(vault);
-    let subaccount_blob = await get_blob_from_account_id(destination);
-    let result = await Ledger_ICP.icrc1_transfer({
-      memo = null;
-      from_subaccount = ?canister_subaccount;
-      to = {
-        owner = getInvoiceCanisterId_();
-        subaccount = ?subaccount_blob;
-      };
-      amount = amount;
-      fee = null;
-      created_at_time = null;
-    });
+  //   // let canister_subaccount = await get_nat8_from_account_id(vault);
+  //   // let subaccount_blob = await get_nat8_from_account_id("0f7e058b7b63c8f676a6475a5760d6c979c5cf0dde86b31c6536e00376c625a5");
 
-    return switch(result){
-      case(#Ok(result)){
-        return #ok();
-      };
-      case(#Err(result)){
-        return #err("Eror");
-      }
-    }
-  };
+  //   let canister_subaccount = await get_blob_from_account_id(vault);
+  //   let subaccount_blob = await get_blob_from_account_id("0f7e058b7b63c8f676a6475a5760d6c979c5cf0dde86b31c6536e00376c625a5");
+
+  //   let balance = await Ledger_ICP.account_balance({account = canister_subaccount});
+  //   Debug.print(debug_show(balance));
+
+  //   let result = await Ledger_ICP.icrc1_transfer({
+  //     memo = null;
+  //     from_subaccount = ?canister_subaccount;
+  //     to = {
+  //       owner = Principal.fromText("3uv7j-mpb7v-i2g6n-u6jru-vkqgv-jizlq-oxz6z-tri6y-4a6f4-t5n4r-oae");
+  //       subaccount = ?subaccount_blob;
+  //     };
+  //     amount = 10000: Nat;
+  //     fee = null;
+  //     created_at_time = null;
+  //   });
+
+  //   Debug.print(debug_show(result));
+  //   return switch(result){
+  //     case(#Ok(result)){
+  //       return #ok(result);
+  //     };
+  //     case(#Err(result)){
+  //       return #err("error");
+  //     }
+  //   }
+  // };
 
   func transfer_icp(
     vault : Text,
     destination : Text,
-    amount : Types.Tokens,
-    caller: Principal,
-  ) : async Result.Result<(), Text> {
+    owner: Principal,
+    amount: Nat,
+  ) : async Bool {
+
+    // let canister_subaccount = await get_nat8_from_account_id(vault);
+    // let destination_subaccount = await get_nat8_from_account_id(destination);
+    let id = switch (Trie.get(vaults_ids_map, textKey(vault), Text.equal)) {
+        case null { "" };
+        case (?v_id) { v_id };
+      };
 
     let canister_subaccount = await get_blob_from_account_id(vault);
-    let destination_subaccount = await get_blob_from_account_id(destination);
+    let destination_subaccount = if (Text.contains(destination, #text "-")) {
+      Account.accountIdentifier(Principal.fromText(destination), Account.defaultSubaccount());
+    } else { await get_blob_from_account_id(destination) };
+    // Account.principalToSubaccount(owner, id)
+    // Blob.toArray(Account.principalToSubaccount(owner, id))
     let fee = await Ledger_ICP.transfer_fee({});
-
+    let balance = await Ledger_ICP.account_balance({account = canister_subaccount});
     let result = await Ledger_ICP.transfer({
       memo = Nat64.fromNat(0);
-      from_subaccount = ?canister_subaccount;
+      from_subaccount = ?Account.principalToSubaccount(owner, id);
       to = destination_subaccount;
-      amount = amount;
+      amount = { e8s = Nat64.fromNat(amount) };
       fee = fee.transfer_fee;
       created_at_time = null;
     });
 
-    return switch(result){
-      case(#Ok(result)){
-        return #ok();
+    switch (result) {
+      case (#Ok(blockIndex)) {
+        Debug.print("Paid reward to in block " # debug_show blockIndex);
       };
-      case(#Err(result)){
-        return #err("Eror");
-      }
-    }
+      case (#Err(#InsufficientFunds { balance })) {
+        throw Error.reject("Top me up! The balance is only " # debug_show balance # " e8s: and ID: " # debug_show id # " " # debug_show Principal.toText(owner) # debug_show vault);
+      };
+      case (#Err(other)) {
+        throw Error.reject("Unexpected error: " # debug_show other);
+      };
+    };
+
+    return true;
   };
 
-  public query func greet(name : Text) : async Text {
-    return "Hello, " # name # "!";
+  public query ({caller}) func greet() : async Text {
+    return "Hello, "# Principal.toText(caller) # "!";
+  };
+
+  private func key(p: Principal): Trie.Key<Principal>{
+    { key=p; hash= Principal.hash(p) }
+  };
+
+  private func textKey(t: Text): Trie.Key<Text>{
+    { key=t; hash = Text.hash(t) }
   };
 
   // get addressbook
-  public shared query func get_address_book(
-    caller: Text,
-  ) : async [Principal] {
-
-    let from_address_book = address_book.get(Principal.fromText(caller));
-
-    switch (from_address_book) {
-      case null {throw Error.reject("Address book does not exist")};
-      case (?from_address_book) {List.toArray(from_address_book) }
+  public shared query ({caller}) func get_address_book(address: Text):async [AddressBook] {
+    switch(Trie.get(address_book, key(caller), Principal.equal)){
+      case null {
+        let newAddress: AddressBook = {
+          name = "My address";
+          address = Principal.toText(caller);
+          telegram  = "";
+          email = "";
+          discord = "";
+          role = "";
+        };
+        let newAddressList = List.make(newAddress);
+        address_book := Trie.put(
+          address_book,
+          key(caller),
+          Principal.equal,
+          newAddressList,
+        ).0;
+        Array.reverse(List.toArray(newAddressList));
+      };
+      case (?book){
+        Array.reverse(List.toArray(book));
+      }
     }
   };
 
   // add adddress to multisig vault
-  public shared func add_address_to_address_book(
-    owner: Text,
+  public shared ({caller}) func add_address_to_address_book(
     addressToAdd: Text,
-  ) : async [Principal] {
-
-    let caller = Principal.fromText(owner);
-    let address = Principal.fromText(addressToAdd); 
-
-    let from_address_book = switch (address_book.get(caller)) {
-      case null { throw Error.reject("Address Book does not exist"); };
-      case (?address_book) { address_book }
+    name: Text,
+    telegram: Text,
+    email: Text,
+    discord: Text,
+    role: Text
+  ) : async [AddressBook] {
+    let userAddressBook = Trie.get(address_book, key(caller), Principal.equal);
+    let newAddress: AddressBook = {
+      name;
+      address = addressToAdd;
+      telegram = telegram;
+      email = email;
+      discord = discord;
+      role = role;
     };
-
-    let is_address_exist = List.find(from_address_book, func(a: Principal) : Bool { a == address });
-
-    switch (is_address_exist) {
+    
+    switch (userAddressBook){
       case null {
-        let updated_address_book = List.push(address, from_address_book);
-        address_book.put(caller, updated_address_book);
-        return List.toArray(updated_address_book);
+        let callerAddress: AddressBook = {
+          name = "My address";
+          address = Principal.toText(caller);
+          telegram  = "";
+          email = "";
+          discord = "";
+          role = "";
+        };
+        let addressbookNewAddress = List.make(callerAddress);
+        let newAddressList = List.push(newAddress, addressbookNewAddress);
+
+        address_book := Trie.put(
+          address_book,
+          key(caller),
+          Principal.equal,
+          newAddressList,
+        ).0;
+        Array.reverse(List.toArray(newAddressList));
       };
-      case (?is_address_exist) {
-        throw Error.reject("Address is already added");
+      case (?addressBook) {
+        let isAlreadyAdded = List.find(addressBook, func(a:AddressBook): Bool{ a.address == addressToAdd});
+
+        if(isAlreadyAdded != null){
+          throw Error.reject(addressToAdd #" is already exist in addressbook");
+        };
+        
+        let newAddressList = List.push(newAddress, addressBook);
+        address_book := Trie.replace(
+          address_book,
+          key(caller),
+          Principal.equal,
+          ?newAddressList
+        ).0;
+        Array.reverse(List.toArray(newAddressList));
       }
-    }
+    };
   };
 
   // create multisig vault
-  public shared func create_vault(
+  public shared ({caller}) func create_vault(
+    name:Text,
     signatories : [Text],
     threshold : Nat,
-    owner: Text,
-  ) : async Text {
+  ) : async { address: Text; multisig: ReturnVault} {
+    var signers: List.List<Principal> = List.map(List.fromArray(signatories), Principal.fromText);
     let id = ULID.toText(idCreationEntropy_.new());
-    let caller = Principal.fromText(owner);
     let canisterId = getInvoiceCanisterId_();
-    let address : Text = Adapter.encodeAddress(Adapter.computeInvoiceSubaccountAddress(id, caller, canisterId));
-    let signers: List.List<Principal> = List.map(List.push(owner, List.fromArray(signatories)), Principal.fromText);
+    // let address: Text = Adapter.encodeAddress(Adapter.computeInvoiceSubaccount(id, caller));
+    let address : Text = Adapter.encodeAddress(Account.accountIdentifier(canisterId, Account.principalToSubaccount(caller, id)));
+
+    vaults_ids_map := Trie.put(vaults_ids_map, textKey(address), Text.equal, id).0;
+
+    let haveCaller = List.find(signers, func (s:Principal):Bool { s == caller });
+
+    if(haveCaller == null){
+      signers := List.push(caller, signers);
+    };
 
     let vault : Vault = {
+      name;
       signers = signers;
       threshold = threshold;
       created_at = Time.now();
+      admin = caller;
     };
 
-    vaults_map.put(address, vault);
+    vaults_map := Trie.put(vaults_map, textKey(address), Text.equal, vault).0;
 
     List.iterate(signers, func (s : Principal){
-      let newVaults = switch (signer_vaults.get(s)) {
+      let newVaults = switch (Trie.get(signer_vaults, key(s), Principal.equal)) {
         case null { List.make(address) };
         case (?oldVaults) { List.push(address, oldVaults) };
       };
-
-      signer_vaults.put(s, newVaults);
+      signer_vaults := Trie.put(signer_vaults, key(s), Principal.equal, newVaults).0;
     });
-    
-    return address;
+
+    return {
+      address;
+      multisig = {
+        name;
+        signers = List.toArray(signers);
+        threshold = threshold;
+        created_at = Time.now();
+        admin = caller;
+      }
+    };
   };
 
   
@@ -244,16 +347,45 @@ shared ({ caller = installer_ }) actor class Multisig() = this {
     return balance;
   };
 
+  public type ReturnVault = {
+    name: Text;
+    signers : [Principal];
+    threshold : Nat;
+    created_at : Int;
+    admin: Principal
+  };
+
+  func get_vault_data(vault: Text):{ address: Text; multisig: ?ReturnVault} {
+    switch (Trie.get(vaults_map, textKey(vault), Text.equal)) {
+      case null { 
+        return { address = vault; multisig = null }
+      };
+      case (?vaultData) { 
+        let multisig = {
+          name= vaultData.name;
+          signers = List.toArray(vaultData.signers);
+          threshold = vaultData.threshold;
+          created_at = vaultData.created_at;
+          admin= vaultData.admin
+        };
+        return {address = vault; multisig = ?multisig} 
+      };
+    };
+  };
+
   
   // get all vault by principal
-  public shared query func get_all_vault_by_principle(owner: Text) : async [Text] {
-
-    switch (signer_vaults.get(Principal.fromText(owner))) {
+  public shared query ({caller}) func get_all_vault_by_principle() : async [{ address: Text; multisig: ?ReturnVault}] {
+    switch (Trie.get(signer_vaults, key(caller), Principal.equal)) {
       case null { 
         return [];
        };
-      case (?oldVaults) { 
-        return List.toArray(oldVaults)
+      case (?oldVaults) {
+        var vaultList = List.nil<{ address: Text; multisig: ?ReturnVault}>();
+        List.iterate(oldVaults, func (vault : Text){
+          vaultList := List.push(get_vault_data(vault), vaultList);
+        });
+        List.toArray(vaultList)
       };
     };
   };
@@ -272,54 +404,9 @@ shared ({ caller = installer_ }) actor class Multisig() = this {
       case (#ok(identifier)) {
         return identifier;
       };
-      case (#err){ throw Error.reject("Vault does not exist") }
+      case (#err){ throw Error.reject("Error in decoding the Addresses") }
     }
   };
-
-  
-  // public func get_principal_from_account_id(accountId: Text) : async Principal {
-  //   let blob = await get_blob_from_account_id(accountId);
-  //   Debug.print(debug_show(blob));
-  //   let principal = Principal.fromBlob(blob);
-  //   Debug.print(debug_show(Principal.toText(principal)));
-  //   principal;
-  // };
-
-  // public query func get_all_vault() : async () {
-  //   for ((key, value) in vaults_map.entries()) {
-  //     Debug.print(debug_show(key #"\n"));
-  //     Debug.print(debug_show(value));
-  //     Debug.print(debug_show("\n"));
-  //   };
-  // };
-
-  // public query func get_all_vault_transactions() : async () {
-  //   for ((key, value) in vault_transations.entries()) {
-  //     Debug.print(debug_show(key #"\n"));
-  //     Debug.print(debug_show(List.toArray(value)));
-  //     Debug.print(debug_show("\n"));
-  //   };
-  // };
-
-  //  public query func get_all_onwer_specific_vault() : async () {
-  //   for ((key, value) in signer_vaults.entries()) {
-  //     Debug.print(debug_show(Principal.toText(key) #"\n"));
-  //     Debug.print(debug_show(List.toArray(value)));
-  //     Debug.print(debug_show("\n"));
-  //   };
-  // };
-
-  // public query func get_all_transactions() : async () {
-  //   for ((key, value) in transactions.entries()) {
-  //     Debug.print(debug_show(key #"\n"));
-  //     Debug.print(debug_show(value));
-  //     Debug.print(debug_show("\n"));
-  //   };
-  // };
-
-  // public shared ({ caller }) func get_caller(): async Principal {
-  //   return caller;
-  // };
 
   // add signatory
   public shared ({ caller }) func add_signatory(
@@ -328,7 +415,7 @@ shared ({ caller = installer_ }) actor class Multisig() = this {
     threshold : Nat
   ) : async Bool {
 
-    let from_vault = switch (vaults_map.get(vault)) {
+    let from_vault = switch (Trie.get(vaults_map, textKey(vault), Text.equal)) {
       case null { throw Error.reject("Vault does not exist") };
       case (?vault_obj) { vault_obj }
     };
@@ -344,12 +431,18 @@ shared ({ caller = installer_ }) actor class Multisig() = this {
     let newSigners = List.push(Principal.fromText(signatory), signers);
 
     let newVault : Vault = {
+      name = from_vault.name;
       signers = newSigners;
       threshold = threshold;
       created_at = from_vault.created_at;
+      admin = from_vault.admin;
     };
-
-    vaults_map.put(vault, newVault);
+    vaults_map := Trie.replace(
+          vaults_map,
+          textKey(vault),
+          Text.equal,
+          ?newVault
+        ).0;
 
     return true;  
   
@@ -362,7 +455,7 @@ shared ({ caller = installer_ }) actor class Multisig() = this {
     threshold : Nat
   ) : async Bool {
 
-   let from_vault = switch (vaults_map.get(vault)) {
+   let from_vault = switch (Trie.get(vaults_map, textKey(vault), Text.equal)) {
       case null { throw Error.reject("Vault does not exist"); };
       case (?vault_obj) { vault_obj }
     };
@@ -377,27 +470,31 @@ shared ({ caller = installer_ }) actor class Multisig() = this {
     let newSigners = List.filter(signers, func(s: Principal) : Bool { s != signatory });
 
     let newVault : Vault = {
+      name = from_vault.name;
       signers = newSigners;
       threshold = threshold;
       created_at = from_vault.created_at;
+      admin = from_vault.admin;
     };
 
-    vaults_map.put(vault, newVault);
+    vaults_map := Trie.replace(
+          vaults_map,
+          textKey(vault),
+          Text.equal,
+          ?newVault
+        ).0;
 
     return true;
   };
 
   // approve transaction
-  public shared func approve_transaction(
+  public shared ({caller}) func approve_transaction(
     vault : Text,
-    transactionId : Text,
-    user: Text
+    transactionId : Text
   ) : async Bool {
-
-    let caller = Principal.fromText(user);
-    let vault_obj = switch (vaults_map.get(vault)){
+    let vault_obj = switch (Trie.get(vaults_map, textKey(vault), Text.equal)){
       case null {
-          throw Error.reject("Vault does not exist");
+          throw Error.reject("Vault does not exist: " # vault );
       };
       case (?v_obj){ v_obj}
     };
@@ -410,58 +507,73 @@ shared ({ caller = installer_ }) actor class Multisig() = this {
       };
       case (?signer) { signer }
     };
-    let obj: Transaction = switch (transactions.get(transactionId)) {
+    
+    let obj: Transaction = switch (Trie.get(transactions, textKey(transactionId), Text.equal)) {
       case null { throw Error.reject("Transaction does not exist"); };
       case (?obj) { obj };
     };
+
     if(obj.completed){
       throw Error.reject("Transaction is already completed"); 
     };
+
     let approvals = obj.approvals;
+    let isApprovedAlready = switch(List.find(approvals, func (a:Principal): Bool{ a == caller })){
+      case null {
+        false;
+      };
+      case (?approvedCaller){
+        throw Error.reject("Transaction is already Approved by this user"); 
+      }
+    };
+
     let newApprovals = List.push(caller, approvals);
 
-    if(obj.threshold == List.size(newApprovals)){
-      let newTransaction : Transaction = {
-        id = obj.id;
-        from_vault = obj.from_vault;
-        to = obj.to;
-        transaction_owner = obj.transaction_owner;
-        threshold = obj.threshold;
-        approvals = newApprovals;
-        amount = obj.amount;
-        created_at = obj.created_at;
-        completed = true;
-      };
-      transactions.put(transactionId, newTransaction);
-      // stop current
-      let transfer_amount ={e8s = Nat64.fromNat(obj.amount)};
-      let result = await transfer_icp(vault, newTransaction.to, transfer_amount, caller);
-    }else{
-      let newTransaction : Transaction = {
-        id = obj.id;
-        from_vault = obj.from_vault;
-        to = obj.to;
-        transaction_owner = obj.transaction_owner;
-        threshold = obj.threshold;
-        approvals = newApprovals;
-        amount = obj.amount;
-        created_at = obj.created_at;
-        completed = false;
-      };
-      transactions.put(transactionId, newTransaction);
+    if(List.size(newApprovals) == obj.threshold){
+      let result = await transfer_icp(vault : Text, obj.to : Text, vault_obj.admin: Principal, obj.amount)
     };
+    
+    let newTransaction : Transaction = {
+      id = obj.id;
+      from_vault = obj.from_vault;
+      to = obj.to;
+      transaction_owner = obj.transaction_owner;
+      threshold = obj.threshold;
+      approvals = newApprovals;
+      amount = obj.amount;
+      created_at = obj.created_at;
+      completed = if(List.size(newApprovals) == obj.threshold){ true } else{ false };
+    };
+
+    transactions := Trie.replace(
+        transactions,
+        textKey(transactionId),
+        Text.equal,
+        ?newTransaction
+      ).0;
+    
     return true;
   };
 
+   public shared ({caller}) func get_all_vault(
+    vault : Text
+  ) : async  [Vault]  {
+    switch (Trie.get(vaults_map, textKey(vault), Text.equal)) {
+      case null { 
+        return [];
+       };
+      case (?oldVaults) {
+        [oldVaults]
+      };
+    };
+  };
+
   // cancel transaction
-  public shared func cancel_transaction(
+  public shared ({caller}) func cancel_transaction(
     vault : Text,
     transactionId : Text,
-    user: Text
   ) : async Bool {
-
-    let caller = Principal.fromText(user);
-    let vault_obj = switch (vaults_map.get(vault)){
+    let vault_obj = switch (Trie.get(vaults_map, textKey(vault), Text.equal)){
       case null {
           throw Error.reject("Vault does not exist");
       };
@@ -476,7 +588,7 @@ shared ({ caller = installer_ }) actor class Multisig() = this {
       };
       case (?signer) { signer }
     };
-    let obj: Transaction = switch (transactions.get(transactionId)) {
+    let obj: Transaction = switch (Trie.get(transactions, textKey(transactionId), Text.equal)) {
       case null { throw Error.reject("Transaction does not exist"); };
       case (?obj) { obj };
     };
@@ -487,19 +599,15 @@ shared ({ caller = installer_ }) actor class Multisig() = this {
     if ( owner != caller ){
       throw Error.reject("Transaction is already completed"); 
     };
-
-    transactions.delete(transactionId);
+    transactions := Trie.remove(transactions, textKey(transactionId), Text.equal).0;
     return true;
   };
 
   // get transactions
-  public shared query func get_transactions(
-    vault : Text,
-    user: Text
+  public shared query ({caller}) func get_transactions(
+    vault : Text
   ) : async [Transaction] {
-
-    let caller = Principal.fromText(user);
-    switch (vault_transations.get(vault)){
+    switch (Trie.get(vault_transations, textKey(vault), Text.equal)){
       case null {
           return [];
       };
@@ -510,14 +618,13 @@ shared ({ caller = installer_ }) actor class Multisig() = this {
   };
 
   // create transaction 
-  public shared func create_transactions(
+  public shared ({caller})  func create_transactions(
     from_vault : Text,
-    caller: Text,
     to : Text,
     amount : Nat,
-  ) : async Bool {
+  ) : async Transaction {
 
-    let vault_obj = switch (vaults_map.get(from_vault)) {
+    let vault_obj = switch (Trie.get(vaults_map, textKey(from_vault), Text.equal)) {
       case null {
         throw Error.reject("Vault does not exist");
       };
@@ -525,10 +632,8 @@ shared ({ caller = installer_ }) actor class Multisig() = this {
         v_obj
       }
     };
-
-    let calllerPrincipal:Principal = Principal.fromText(caller);
     let signers = vault_obj.signers;
-    let signer = List.find(signers, func (a: Principal): Bool{ a == calllerPrincipal });
+    let signer = List.find(signers, func (a: Principal): Bool{ a == caller });
     
     let owner = switch (signer) {
       case null {
@@ -541,27 +646,27 @@ shared ({ caller = installer_ }) actor class Multisig() = this {
     
     let id = ULID.toText(idCreationEntropy_.new());
 
-    let newTransationId = switch (vault_transations.get(from_vault)) {
+    let newTransationWithId = switch (Trie.get(vault_transations, textKey(from_vault), Text.equal)) {
       case null { List.make(id) };
       case (?oldTransactions) { List.push(id, oldTransactions) };
     };
 
-    vault_transations.put(from_vault, newTransationId);
+    vault_transations := Trie.put(vault_transations, textKey(from_vault), Text.equal, newTransationWithId).0;
 
-    let newApprovals = List.make(calllerPrincipal);
+    let newApprovals = List.make(caller);
     let newTransaction : Transaction = {
       id = id;
       from_vault = from_vault;
       to = to;
-      transaction_owner = calllerPrincipal;
+      transaction_owner = caller;
       threshold = vault_obj.threshold;
       approvals = newApprovals;
       amount = amount;
       created_at = Time.now();
       completed = false;
     };
-    transactions.put(id, newTransaction);
-    return false;
+    transactions := Trie.put(transactions, textKey(id), Text.equal, newTransaction).0;
+    return newTransaction;
   };
 
 }

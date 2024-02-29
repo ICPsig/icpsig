@@ -34,7 +34,6 @@ const Signatory = ({
   const { address, addressBook } = useGlobalUserDetailsContext();
 
   const [addresses, setAddresses] = useState<ISignature[]>([]);
-
   const walletAccounts = useGetWalletAccounts();
 
   useEffect(() => {
@@ -89,19 +88,16 @@ const Signatory = ({
   const drop = (event: any) => {
     event.preventDefault();
     const data = event.dataTransfer.getData("text");
-    const address = data;
+    const address = data.substring(data.indexOf("-") + 1);
 
     if (!address) return; //is invalid
 
     setSignatories((prevState) => {
-      if (!prevState) {
-        return [];
-      }
       if (prevState.includes(address)) {
         return prevState;
-      } else {
-        return [...prevState, address];
       }
+
+      return [...prevState, address];
     });
 
     const drop2 = document.getElementById(`drop2${homepage && "-home"}`);
@@ -113,15 +109,12 @@ const Signatory = ({
   const dropReturn = (event: any) => {
     event.preventDefault();
     const data = event.dataTransfer.getData("text");
-    const address = data;
+    const address = data.substring(data.indexOf("-") + 1);
 
     if (!address) return; //is invalid
 
     if (signatories.includes(address)) {
       setSignatories((prevState) => {
-        if (!prevState) {
-          return [];
-        }
         const copyState = [...prevState];
         const index = copyState.indexOf(address);
         copyState.splice(index, 1);
@@ -137,15 +130,11 @@ const Signatory = ({
   const clickDropReturn = (event: any) => {
     event.preventDefault();
     const data = event.target.id;
-    const address = data;
+    const address = data.substring(data.indexOf("-") + 1);
 
     if (!address) return; //is invalid
-
     if (signatories.includes(address)) {
       setSignatories((prevState) => {
-        if (!prevState) {
-          return [];
-        }
         const copyState = [...prevState];
         const index = copyState.indexOf(address);
         copyState.splice(index, 1);
@@ -161,17 +150,14 @@ const Signatory = ({
   const clickDrop = async (event: any) => {
     event.preventDefault();
     const data = event.target.id;
-    const address = data;
+    const address = data.substring(data.indexOf("-") + 1);
 
     setSignatories((prevState) => {
-      if (!prevState) {
-        return [];
-      }
       if (prevState.includes(address)) {
         return prevState;
-      } else {
-        return [...prevState, address];
       }
+
+      return [...prevState, address];
     });
 
     const drop2 = document.getElementById(`drop2${homepage && "-home"}`);
@@ -250,9 +236,7 @@ const Signatory = ({
               // </Button>
               // </Tooltip>
               <>
-                <div className="text-sm text-text_secondary">
-                  Addresses imported directly from your Polkadot.js wallet
-                </div>
+                <div className="text-sm text-text_secondary">Addresses</div>
                 {walletAccounts
                   .filter((item: string) => item !== address)
                   .map((account: string, i: number) => (
@@ -287,8 +271,8 @@ const Signatory = ({
           >
             <p
               title={address || ""}
-              id={`0-${signatories[0]}`}
-              key={`0-${signatories[0]}`}
+              id={`0-${signatories}`}
+              key={`0-${signatories}`}
               className="bg-bg-main p-2 m-1 rounded-md text-white cursor-default flex items-center gap-x-2 cursor-grab"
             >
               {addressBook[0]?.name}{" "}

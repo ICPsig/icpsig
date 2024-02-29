@@ -81,8 +81,8 @@ module Adapter {
     canisterId : Principal,
   ) : AccountIdentifier {
     AccountIdentifierBlob.fromPrincipal(
-      canisterId,
-      ?Blob.toArray(computeInvoiceSubaccount(id, creator)),
+      creator,
+      ?Blob.toArray(computeInvoiceSubaccount(id, canisterId)),
     );
   };
 

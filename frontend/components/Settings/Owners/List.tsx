@@ -148,12 +148,11 @@ const ListOwners = ({
     activeMultisig,
     addressBook,
     address: userAddress,
-    activeMultisigData,
   } = useGlobalUserDetailsContext();
   const multisig = multisigAddresses?.find(
     (item: any) => item.address === activeMultisig,
   );
-  const signatories = activeMultisigData?.signatories || multisig?.signatories;
+  const signatories = multisig?.signatories;
   const userAddressObject = addressBook.find(
     (item) => item.address === userAddress,
   );

@@ -7,7 +7,6 @@ import React, { useEffect, useState } from "react";
 import AddressCard from "@frontend/components/Home/AddressCard";
 import ConnectWallet from "@frontend/components/Home/ConnectWallet";
 import ConnectWalletWrapper from "@frontend/components/Home/ConnectWallet/ConnectWalletWrapper";
-import NewUserModal from "@frontend/components/Home/ConnectWallet/NewUserModal";
 import DashboardCard from "@frontend/components/Home/DashboardCard";
 import TxnCard from "@frontend/components/Home/TxnCard";
 import AddMultisig from "@frontend/components/Multisig/AddMultisig";
@@ -16,6 +15,7 @@ import { useGlobalIdentityContext } from "@frontend/context/IdentityProviderCont
 import { useGlobalUserDetailsContext } from "@frontend/context/UserDetailsContext";
 import Spinner from "@frontend/ui-components/Loader";
 import styled from "styled-components";
+import useIcpVault from "@frontend/hooks/useIcpVault";
 
 const Home = () => {
   const {
@@ -32,18 +32,13 @@ const Home = () => {
   const [transactionLoading] = useState(false);
   const [isOnchain, setIsOnchain] = useState(true);
   const [openTransactionModal, setOpenTransactionModal] = useState(false);
-  const [openNewUserModal, setOpenNewUserModal] = useState(false);
-  const { account } = useGlobalIdentityContext();
-
-  useEffect(() => {
-    if (
-      dayjs(createdAt) > dayjs().subtract(15, "seconds") &&
-      addressBook?.length === 1
-    ) {
-      setOpenNewUserModal(true);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [createdAt]);
+  
+  const { account, principal } = useGlobalIdentityContext();
+  const [vault, setVault] = useState<string>("");
+  const [toAddress, setToAddress] = useState<string>("");
+  const [txdId, setTxdId] = useState<string>("");
+  const { create_vault, create_transactions, approve_transaction } =
+    useIcpVault();
 
   useEffect(() => {
     const handleNewTransaction = async () => {
@@ -61,14 +56,34 @@ const Home = () => {
     handleNewTransaction();
   }, [activeMultisig, identityBackend]);
 
+  // const handleCreateVault = async () => {
+  //   const { data, error } = await create_vault([principal], BigInt(1));
+  //   console.log(data);
+  //   console.log(error);
+  //   setVault(data);
+  // };
+
+  const handleSendMoney = async () => {
+    const { data, error } = await create_transactions(
+      vault,
+      toAddress,
+      BigInt(1),
+    );
+    console.log(data);
+    console.log(error);
+    setTxdId(data);
+  };
+
+  const handleApproveTransaction = async () => {
+    const { data, error } = await approve_transaction(vault, txdId);
+    console.log(data);
+    console.log(error);
+  };
+
   return (
     <>
       {account ? (
         <>
-          <NewUserModal
-            open={openNewUserModal}
-            onCancel={() => setOpenNewUserModal(false)}
-          />
           {loading ? (
             <Spinner size="large" />
           ) : multisigAddresses.length > 0 ? (

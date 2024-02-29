@@ -2,32 +2,25 @@
 // This software may be modified and distributed under the terms
 // of the Apache-2.0 license. See the LICENSE file for details.
 
-import { MenuOutlined } from "@ant-design/icons"
-import { Layout } from "antd"
-import { useGlobalIdentityContext } from "@frontend/context/IdentityProviderContext"
-import React, { FC } from "react"
-import { useLocation } from "react-router-dom"
-import Notification from "../Notification"
-import AddressDropdown from "../AddressDropdown"
+import { MenuOutlined } from "@ant-design/icons";
+import { Layout } from "antd";
+import { useGlobalIdentityContext } from "@frontend/context/IdentityProviderContext";
+import React, { FC } from "react";
+import { useLocation } from "react-router-dom";
+import Notification from "../Notification";
+import AddressDropdown from "../AddressDropdown";
 // import { DocsIcon } from "@frontend/ui-components/CustomIcons"
 
-const { Header } = Layout
+const { Header } = Layout;
 
 interface Props {
-  className?: string
-  sideDrawer: boolean
-  setSideDrawer: React.Dispatch<React.SetStateAction<boolean>>
-  showSubmenu?: boolean
-  onClick?: VoidFunction
+  className?: string;
+  sideDrawer: boolean;
+  setSideDrawer: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-const NavHeader: FC<Props> = ({
-  sideDrawer,
-  setSideDrawer,
-  showSubmenu,
-  onClick,
-}) => {
-  const { account } = useGlobalIdentityContext()
+const NavHeader: FC<Props> = ({ sideDrawer, setSideDrawer }) => {
+  const { account } = useGlobalIdentityContext();
   return (
     <Header className="bg-bg-main flex flex-row items-center p-0 h-[70px]">
       <section className="hidden lg:block w-[180px]"></section>
@@ -36,7 +29,7 @@ const NavHeader: FC<Props> = ({
           <button
             className="flex items-center justify-center outline-none border-none bg-bg-secondary text-primary rounded-lg px-[18px] py-[8px] font-bold text-xl"
             onClick={() => {
-              setSideDrawer(!sideDrawer)
+              setSideDrawer(!sideDrawer);
             }}
           >
             <MenuOutlined />
@@ -64,7 +57,7 @@ const NavHeader: FC<Props> = ({
         </article>
       </section>
     </Header>
-  )
-}
+  );
+};
 
-export default NavHeader
+export default NavHeader;

@@ -24,8 +24,9 @@ interface IAddress {
 }
 
 const AddressDropdown = () => {
-  const { account } = useGlobalIdentityContext();
-  const { addressBook, loggedInWallet, setUserDetailsContextState } =
+  const { principal, setPrincipal, setAccounts, setAuthClient, setIdentity } =
+    useGlobalIdentityContext();
+  const { addressBook, setUserDetailsContextState } =
     useGlobalUserDetailsContext();
   const navigate = useNavigate();
 
@@ -43,11 +44,15 @@ const AddressDropdown = () => {
         multisigAddresses: [],
       };
     });
+    setPrincipal("");
+    setAccounts("");
+    setAuthClient("");
+    setIdentity("");
     toggleVisibility(false);
     return navigate("/", { replace: true });
   };
 
-  if (!account) {
+  if (!principal) {
     return (
       <Link
         to={"/"}
@@ -75,19 +80,19 @@ const AddressDropdown = () => {
         className="flex items-center justify-center gap-x-2 outline-none border-none text-white bg-highlight rounded-lg p-2.5 shadow-none text-xs"
       >
         <p className="flex items-center gap-x-2">
-          <Avatar address={account || ""} size={30} />
+          <Avatar address={principal || ""} size={30} />
           <span
-            title={account}
+            title={principal}
             className="hidden md:inline-flex w-20 overflow-hidden truncate"
           >
-            {addressBook?.find((item: any) => item.address === account)?.name ||
-              DEFAULT_ADDRESS_NAME}
+            {addressBook?.find((item: any) => item.address === principal)
+              ?.name || DEFAULT_ADDRESS_NAME}
           </span>
         </p>
         <CircleArrowDownIcon
           className={classNames("hidden md:inline-flex text-sm", {
-            "text-primary": account,
-            "text-white": !account,
+            "text-primary": principal,
+            "text-white": !principal,
           })}
         />
       </button>
@@ -109,20 +114,20 @@ const AddressDropdown = () => {
       >
         <div className="flex items-center justify-center flex-col gap-y-5">
           <div className="flex items-center justify-center flex-col gap-y-2">
-            <Avatar address={account} size={50} />
+            <Avatar address={principal} size={50} />
             <p className="text-white font-normal text-sm">
-              {addressBook?.find((item: any) => item.address === account)
+              {addressBook?.find((item: any) => item.address === principal)
                 ?.name || DEFAULT_ADDRESS_NAME}
             </p>
             <p className="bg-bg-secondary mb-1 w-[300px] font-normal gap-x-2 text-sm p-2 rounded-lg flex items-center justify-center">
               <span className="text-text_secondary">
-                {shortenAddress(account)}
+                {shortenAddress(principal)}
               </span>
-              <button onClick={() => copyText(account)}>
+              <button onClick={() => copyText(principal)}>
                 <CopyIcon className="text-base text-primary cursor-pointer" />
               </button>
             </p>
-            <Balance className="ml-0" address={account} />
+            <Balance className="ml-0" address={principal} />
           </div>
           <div className="w-full">
             <p className="border-t border-text_secondary flex items-center text-normal text-sm justify-between w-full p-2">

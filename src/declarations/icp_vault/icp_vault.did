@@ -1,3 +1,11 @@
+type Vault = 
+ record {
+   admin: principal;
+   created_at: int;
+   name: text;
+   signers: Signers;
+   threshold: nat;
+ };
 type Transaction = 
  record {
    amount: nat;
@@ -11,20 +19,43 @@ type Transaction =
    transaction_owner: principal;
  };
 type Tokens = record {e8s: nat64;};
+type Signers = 
+ opt record {
+       principal;
+       List;
+     };
+type ReturnVault = 
+ record {
+   admin: principal;
+   created_at: int;
+   name: text;
+   signers: vec principal;
+   threshold: nat;
+ };
 type Multisig = 
  service {
-   add_address_to_address_book: (text, text) -> (vec principal);
+   add_address_to_address_book: (text, text, text, text, text, text) ->
+    (vec AddressBook);
    add_signatory: (text, text, nat) -> (bool);
-   approve_transaction: (text, text, text) -> (bool);
-   cancel_transaction: (text, text, text) -> (bool);
-   create_transactions: (text, text, text, nat) -> (bool);
-   create_vault: (vec text, nat, text) -> (text);
+   approve_transaction: (text, text) -> (bool);
+   cancel_transaction: (text, text) -> (bool);
+   create_transactions: (text, text, nat) -> (Transaction);
+   create_vault: (text, vec text, nat) ->
+    (record {
+       address: text;
+       multisig: ReturnVault;
+     });
    getCanisterPrincipal: () -> (principal);
-   get_address_book: (text) -> (vec principal) query;
-   get_all_vault_by_principle: (text) -> (vec text) query;
+   get_address_book: (text) -> (vec AddressBook) query;
+   get_all_vault: (text) -> (vec Vault);
+   get_all_vault_by_principle: () ->
+    (vec record {
+           address: text;
+           multisig: opt ReturnVault;
+         }) query;
    get_multisig_balance: (text) -> (Tokens);
-   get_transactions: (text, text) -> (vec Transaction) query;
-   greet: (text) -> (text) query;
+   get_transactions: (text) -> (vec Transaction) query;
+   greet: () -> (text) query;
    remove_signatory: (text, principal, nat) -> (bool);
  };
 type List = 
@@ -32,4 +63,13 @@ type List =
        principal;
        List;
      };
+type AddressBook = 
+ record {
+   address: text;
+   discord: text;
+   email: text;
+   name: text;
+   role: text;
+   telegram: text;
+ };
 service : () -> Multisig

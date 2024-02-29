@@ -2,19 +2,19 @@
 // This software may be modified and distributed under the terms
 // of the Apache-2.0 license. See the LICENSE file for details.
 
-import classNames from "classnames"
-import dayjs from "dayjs"
-import React, { useCallback, useEffect, useRef, useState } from "react"
+import classNames from "classnames";
+import dayjs from "dayjs";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 
-import noNotification from "@frontend/assets/icons/no-notification.svg"
-import { useGlobalUserDetailsContext } from "@frontend/context/UserDetailsContext"
-import { firebaseFunctionsHeader } from "../../global/firebaseFunctionsHeader"
-import { FIREBASE_FUNCTIONS_URL } from "../../global/firebaseFunctionsUrl"
-import { INotification } from "@frontend/types"
-import { NotificationIcon } from "@frontend/ui-components/CustomIcons"
+import noNotification from "@frontend/assets/icons/no-notification.svg";
+import { useGlobalUserDetailsContext } from "@frontend/context/UserDetailsContext";
+import { firebaseFunctionsHeader } from "../../global/firebaseFunctionsHeader";
+import { FIREBASE_FUNCTIONS_URL } from "../../global/firebaseFunctionsUrl";
+import { INotification } from "@frontend/types";
+import { NotificationIcon } from "@frontend/ui-components/CustomIcons";
 
-import NotificationCard from "./NotificationCard"
-import Loader from "@frontend/ui-components/Loader"
+import NotificationCard from "./NotificationCard";
+import Loader from "@frontend/ui-components/Loader";
 
 export enum ENotificationStatus {
   READ = "READ",
@@ -22,69 +22,42 @@ export enum ENotificationStatus {
 }
 
 const Notification = () => {
-  const { address, setUserDetailsContextState } = useGlobalUserDetailsContext()
+  const { address, setUserDetailsContextState } = useGlobalUserDetailsContext();
 
-  const [loading, setLoading] = useState(true)
-  const [notifications, setNotifications] = useState<INotification[]>([])
-  const [isVisible, toggleVisibility] = useState(false)
-  const isMouseEnter = useRef(false)
+  const [loading, setLoading] = useState(true);
+  const [notifications, setNotifications] = useState<INotification[]>([]);
+  const [isVisible, toggleVisibility] = useState(false);
+  const isMouseEnter = useRef(false);
   const unreadNotificationAvailable = !notifications.length
     ? undefined
     : notifications.filter(({ created_at }) =>
         dayjs().isAfter(created_at) ? false : true,
-      )
-
-  const getNotifications = useCallback(async () => {
-    if (!address) return
-
-    setLoading(true)
-    const getNotificationsRes = await fetch(
-      `${FIREBASE_FUNCTIONS_URL}/getNotificationsEth`,
-      {
-        method: "POST",
-      },
-    )
-
-    const { data, error } = await getNotificationsRes.json()
-    if (error) {
-      console.log("Error in Fetching notifications: ", error)
-    }
-    if (data) {
-      setNotifications(data as INotification[])
-    }
-    setLoading(false)
-  }, [address])
+      );
 
   const markAllRead = useCallback(async () => {
-    const newNotifiedTill = new Date()
-    localStorage.setItem("notifiedTill", newNotifiedTill.toISOString())
+    const newNotifiedTill = new Date();
+    localStorage.setItem("notifiedTill", newNotifiedTill.toISOString());
     setUserDetailsContextState((prevState: any) => {
       return {
         ...prevState,
         notifiedTill: newNotifiedTill,
-      }
-    })
+      };
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  useEffect(() => {
-    if (!address) return
-    getNotifications()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [address])
+  }, []);
 
   return (
     <div
       className="relative"
       onBlur={() => {
         if (!isMouseEnter.current) {
-          isVisible ? toggleVisibility(false) : null
+          isVisible ? toggleVisibility(false) : null;
         }
       }}
     >
       <button
         onClick={() => {
-          isVisible ? toggleVisibility(false) : toggleVisibility(true)
+          isVisible ? toggleVisibility(false) : toggleVisibility(true);
         }}
         className="flex items-center justify-center outline-none border-none text-white bg-highlight rounded-lg p-2.5 shadow-none text-sm"
       >
@@ -100,10 +73,10 @@ const Notification = () => {
           },
         )}
         onMouseEnter={() => {
-          isMouseEnter.current = true
+          isMouseEnter.current = true;
         }}
         onMouseLeave={() => {
-          isMouseEnter.current = false
+          isMouseEnter.current = false;
         }}
       >
         <div className="flex gap-x-5 items-center justify-between mb-1 px-3">
@@ -125,7 +98,7 @@ const Notification = () => {
               <section>
                 <div className="flex flex-col gap-y-[10px] mt-2">
                   {notifications.map((notification, index) => {
-                    return <NotificationCard key={index} {...notification} />
+                    return <NotificationCard key={index} {...notification} />;
                   })}
                 </div>
               </section>
@@ -147,7 +120,7 @@ const Notification = () => {
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default Notification
+export default Notification;

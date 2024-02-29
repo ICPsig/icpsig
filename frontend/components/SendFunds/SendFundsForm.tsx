@@ -41,6 +41,8 @@ import styled from "styled-components";
 
 import TransactionFailedScreen from "./TransactionFailedScreen";
 import TransactionSuccessScreen from "./TransactionSuccessScreen";
+import useIcpVault from "@frontend/hooks/useIcpVault";
+import convertToE8s from "@frontend/utils/convertToE8s";
 
 export interface IRecipientAndAmount {
   recipient: string;
@@ -65,16 +67,8 @@ const SendFundsForm = ({
   defaultSelectedAddress,
   setNewTxn,
 }: ISendFundsFormProps) => {
-  const {
-    activeMultisig,
-    addressBook,
-    address,
-    identityBackend,
-    multisigAddresses,
-    transactionFields,
-    activeMultisigData,
-    setActiveMultisigData,
-  } = useGlobalUserDetailsContext();
+  const { activeMultisig, addressBook, address, transactionFields } =
+    useGlobalUserDetailsContext();
   const { records } = useActiveMultisigContext();
   const [selectedToken, setSelectedToken] = useState<string>("");
 
@@ -116,6 +110,8 @@ const SendFundsForm = ({
     subfields: { [subfield: string]: { name: string; value: string } };
   }>({ category: "none", subfields: {} });
 
+  const { create_transactions } = useIcpVault();
+
   const [sendMode, setSendMode] = useState<ESendMode>(ESendMode.SEND);
   const [ckBTCAddress, setCkBTCAddress] = useState<string>("");
 
@@ -143,20 +139,6 @@ const SendFundsForm = ({
       copyArray[i] = copyObject;
       return copyArray;
     });
-  };
-
-  const onAddRecipient = () => {
-    setRecipientAndAmount((prevState) => {
-      const copyOptionsArray = [...prevState];
-      copyOptionsArray.push({ amount: "0", recipient: "" });
-      return copyOptionsArray;
-    });
-  };
-
-  const onRemoveRecipient = (i: number) => {
-    const copyOptionsArray = [...recipientAndAmount];
-    copyOptionsArray.splice(i, 1);
-    setRecipientAndAmount(copyOptionsArray);
   };
 
   // Set address options for recipient
@@ -190,7 +172,7 @@ const SendFundsForm = ({
       0,
     );
     setAmount(total.toString());
-  }, [activeMultisigData, recipientAndAmount]);
+  }, [recipientAndAmount]);
 
   useEffect(() => {
     if (!recipientAndAmount) return;
@@ -224,24 +206,14 @@ const SendFundsForm = ({
     try {
       const recipients = recipientAndAmount.map((r) => r.recipient);
       const amounts = recipientAndAmount.map((a) => a.amount);
-      const multisigValutTx = (
-        await identityBackend.createTransferTx(
-          activeMultisig,
-          recipients,
-          amounts,
-          address,
-        )
-      ).data;
+      const convertToICPFormat = convertToE8s(Number(amounts?.[0]));
+      const { data: multisigVaultTx } = await create_transactions(
+        activeMultisig,
+        recipients?.[0],
+        convertToICPFormat,
+      );
 
-      if (multisigValutTx) {
-        console.log(amount);
-        setActiveMultisigData((prev: any) => {
-          console.log(prev.balance);
-          return {
-            ...prev,
-            balance: Number(prev?.balance || 0) - Number(amount || 0),
-          };
-        });
+      if (multisigVaultTx) {
         queueNotification({
           header: "Success",
           message: "New Transaction Created.",
@@ -433,6 +405,7 @@ const SendFundsForm = ({
                   <Balance
                     address={activeMultisig}
                     onChange={setMultisigBalance}
+                    isCkbtc={selectedToken === "ckBTC"}
                   />
                 </article>
                 <article className="w-[412px] flex items-center">
@@ -570,27 +543,10 @@ const SendFundsForm = ({
                             onChange={(balance) => onAmountChange(balance, i)}
                             setToken={setSelectedToken}
                           />
-                          {i !== 0 && (
-                            <Button
-                              onClick={() => onRemoveRecipient(i)}
-                              className="text-failure border-none outline-none bg-failure bg-opacity-10 flex items-center justify-center p-1 sm:p-2 rounded-md sm:rounded-lg text-xs sm:text-sm w-6 h-6 sm:w-8 sm:h-8"
-                            >
-                              <DeleteIcon />
-                            </Button>
-                          )}
                         </div>
                       </article>
                     ))}
                   </div>
-                  {selectedToken !== "ckBTC" && (
-                    <Button
-                      icon={<PlusCircleOutlined className="text-primary" />}
-                      className="bg-transparent p-0 border-none outline-none text-primary text-sm flex items-center"
-                      onClick={onAddRecipient}
-                    >
-                      Add Another Recipient
-                    </Button>
-                  )}
                 </div>
                 <div className="flex flex-col gap-y-4">
                   <article className="w-[412px] flex items-center">
@@ -653,7 +609,7 @@ const SendFundsForm = ({
                 >
                   <Input
                     placeholder={
-                      selectedToken === "ckBTC"
+                      sendMode === ESendMode.WITHDRAW
                         ? "Please enter you bitcoin wallet"
                         : "Enter Pricipal ID or Account ID"
                     }
@@ -861,8 +817,7 @@ const SendFundsForm = ({
                     item.amount === "0" ||
                     !item.amount,
                 ) ||
-                Number(amount) >
-                  Number(activeMultisigData?.safeBalance?.toString()) ||
+                // Number(amount) > Number(multisigBalance) ||
                 Object.keys(transactionFields[category].subfields).some(
                   (key) =>
                     !transactionFieldsObject.subfields[key]?.value &&
