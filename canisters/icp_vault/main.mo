@@ -18,6 +18,8 @@ import Source "mo:ulid/Source";
 import ULID "mo:ulid/ULID";
 import Debug "mo:base/Debug";
 import Ledger_ICP "canister:icp_ledger_canister";
+import Ckbtc_Ledger_ICP "canister:icrc1_ledger_canister";
+import Cketh_Ledger_ICP "canister:cketh_ledger";
 import Token "./Token";
 import Types "./Types";
 import Adapter "./Adapter";
@@ -47,6 +49,14 @@ shared ({ caller = installer_ }) actor class Multisig() = this {
     admin: Principal
   };
 
+  public type TowFAType = {
+    base32_secret: Text;
+    enabled: Bool;
+    url: Text;
+    verified: Bool;
+    tfaToken: Text
+  };
+
   public type Transaction = {
     id : Text;
     from_vault : Text;
@@ -56,11 +66,13 @@ shared ({ caller = installer_ }) actor class Multisig() = this {
     approvals : List.List<Principal>;
     amount : Nat;
     created_at : Int;
-    completed: Bool
+    completed: Bool;
+    currencyType: Text;
+    toPrincipal: Principal;
   };
 
   // var transactions : RBTree.RBTree<Text, Transaction> = RBTree.RBTree<Text, Transaction>(Text.compare);
-
+  stable var two_f_a_map : Trie.Trie<Principal, TowFAType> = Trie.empty();
   stable var transactions : Trie.Trie<Text, Transaction> = Trie.empty();
   stable var vault_transations : Trie.Trie<Text, List.List<Text>> = Trie.empty();
   stable var vaults_map : Trie.Trie<Text, Vault> = Trie.empty();
@@ -70,7 +82,9 @@ shared ({ caller = installer_ }) actor class Multisig() = this {
 
   let icp_ledger_canister = "ryjl3-tyaaa-aaaaa-aaaba-cai";
 
-  // let Ledger_ICP: Types.Actor = actor (icp_ledger_canister);
+  let ckBTC_minter_canister = "mqygn-kiaaa-aaaar-qaadq-cai";
+
+  let CKBTC_MINTER: Types.CKBTC_Actor = actor (ckBTC_minter_canister);
 
   /** Source of entropy for substantiating ULID multisig ids. */
   let idCreationEntropy_ = Source.Source(XorShift.toReader(XorShift.XorShift64(null)), 0);
@@ -91,13 +105,15 @@ shared ({ caller = installer_ }) actor class Multisig() = this {
           return {
             id  = " ";
             from_vault = " ";
-            transaction_owner = Principal.fromText(" ");
+            transaction_owner = Principal.fromText("2vxsx-fae");
             to = " ";
             threshold= 0;
             approvals = List.nil<Principal>();
             amount =0;
             created_at = 0;
             completed = false;
+            currencyType = "ICP";
+            toPrincipal = Principal.fromText("2vxsx-fae");
           };
         };
         case(?tr){
@@ -109,42 +125,79 @@ shared ({ caller = installer_ }) actor class Multisig() = this {
     return List.toArray(newList);
   };
 
-  // func transfer_icrc1(
-  //   vault : Text,
-  //   destination : Text
-  // ) : async Result.Result<Nat, Text> {
+  func transfer_ckBTC(
+    vault : Text,
+    // destination :  { owner : Principal; subaccount : ?Blob },
+    destination :  { owner : Principal; subaccount : ?[Nat8] },
+    owner: Principal,
+    amount: Nat,
+  ) : async Result.Result<Nat, Text> {
 
-  //   // let canister_subaccount = await get_nat8_from_account_id(vault);
-  //   // let subaccount_blob = await get_nat8_from_account_id("0f7e058b7b63c8f676a6475a5760d6c979c5cf0dde86b31c6536e00376c625a5");
+    // let canister_subaccount = await get_nat8_from_account_id(vault);
+    // let subaccount_blob = await get_nat8_from_account_id("0f7e058b7b63c8f676a6475a5760d6c979c5cf0dde86b31c6536e00376c625a5");
 
-  //   let canister_subaccount = await get_blob_from_account_id(vault);
-  //   let subaccount_blob = await get_blob_from_account_id("0f7e058b7b63c8f676a6475a5760d6c979c5cf0dde86b31c6536e00376c625a5");
+    let id = switch (Trie.get(vaults_ids_map, textKey(vault), Text.equal)) {
+        case null { "" };
+        case (?v_id) { v_id };
+      };
 
-  //   let balance = await Ledger_ICP.account_balance({account = canister_subaccount});
-  //   Debug.print(debug_show(balance));
+    let fee = await Ckbtc_Ledger_ICP.icrc1_fee();
+    let result = await Ckbtc_Ledger_ICP.icrc1_transfer({
+      memo = null;
+      from_subaccount = ?Blob.toArray(Account.principalToSubaccount(owner, id));
+      // from_subaccount = ?Account.principalToSubaccount(owner, id);
+      to = destination;
+      amount = amount: Nat;
+      fee = ?fee;
+      created_at_time = null;
+    });
 
-  //   let result = await Ledger_ICP.icrc1_transfer({
-  //     memo = null;
-  //     from_subaccount = ?canister_subaccount;
-  //     to = {
-  //       owner = Principal.fromText("3uv7j-mpb7v-i2g6n-u6jru-vkqgv-jizlq-oxz6z-tri6y-4a6f4-t5n4r-oae");
-  //       subaccount = ?subaccount_blob;
-  //     };
-  //     amount = 10000: Nat;
-  //     fee = null;
-  //     created_at_time = null;
-  //   });
+    return switch(result){
+      case(#Ok(result)){
+        return #ok(result);
+      };
+      case(#Err(result)){
+        return #err("error");
+      }
+    }
+  };
 
-  //   Debug.print(debug_show(result));
-  //   return switch(result){
-  //     case(#Ok(result)){
-  //       return #ok(result);
-  //     };
-  //     case(#Err(result)){
-  //       return #err("error");
-  //     }
-  //   }
-  // };
+  func transfer_ckEth(
+    vault : Text,
+    // destination :  { owner : Principal; subaccount : ?Blob },
+    destination :  { owner : Principal; subaccount : ?[Nat8] },
+    owner: Principal,
+    amount: Nat,
+  ) : async Result.Result<Nat, Text> {
+
+    // let canister_subaccount = await get_nat8_from_account_id(vault);
+    // let subaccount_blob = await get_nat8_from_account_id("0f7e058b7b63c8f676a6475a5760d6c979c5cf0dde86b31c6536e00376c625a5");
+
+    let id = switch (Trie.get(vaults_ids_map, textKey(vault), Text.equal)) {
+        case null { "" };
+        case (?v_id) { v_id };
+      };
+
+    let fee = await Cketh_Ledger_ICP.icrc1_fee();
+    let result = await Cketh_Ledger_ICP.icrc1_transfer({
+      memo = null;
+      from_subaccount = ?Blob.toArray(Account.principalToSubaccount(owner, id));
+      // from_subaccount = ?Account.principalToSubaccount(owner, id);
+      to = destination;
+      amount = amount: Nat;
+      fee = ?fee;
+      created_at_time = null;
+    });
+
+    return switch(result){
+      case(#Ok(result)){
+        return #ok(result);
+      };
+      case(#Err(result)){
+        return #err("error");
+      }
+    }
+  };
 
   func transfer_icp(
     vault : Text,
@@ -153,24 +206,24 @@ shared ({ caller = installer_ }) actor class Multisig() = this {
     amount: Nat,
   ) : async Bool {
 
-    // let canister_subaccount = await get_nat8_from_account_id(vault);
-    // let destination_subaccount = await get_nat8_from_account_id(destination);
+
     let id = switch (Trie.get(vaults_ids_map, textKey(vault), Text.equal)) {
         case null { "" };
         case (?v_id) { v_id };
       };
 
-    let canister_subaccount = await get_blob_from_account_id(vault);
+    // let canister_subaccount = Blob.toArray(Account.principalToSubaccount(owner, id));
+    // let destination_subaccount = await get_nat8_from_account_id(destination);
+    let canister_subaccount = Account.principalToSubaccount(owner, id);
     let destination_subaccount = if (Text.contains(destination, #text "-")) {
       Account.accountIdentifier(Principal.fromText(destination), Account.defaultSubaccount());
     } else { await get_blob_from_account_id(destination) };
-    // Account.principalToSubaccount(owner, id)
-    // Blob.toArray(Account.principalToSubaccount(owner, id))
+    
+
     let fee = await Ledger_ICP.transfer_fee({});
-    let balance = await Ledger_ICP.account_balance({account = canister_subaccount});
     let result = await Ledger_ICP.transfer({
       memo = Nat64.fromNat(0);
-      from_subaccount = ?Account.principalToSubaccount(owner, id);
+      from_subaccount = ?canister_subaccount;
       to = destination_subaccount;
       amount = { e8s = Nat64.fromNat(amount) };
       fee = fee.transfer_fee;
@@ -299,7 +352,6 @@ shared ({ caller = installer_ }) actor class Multisig() = this {
     var signers: List.List<Principal> = List.map(List.fromArray(signatories), Principal.fromText);
     let id = ULID.toText(idCreationEntropy_.new());
     let canisterId = getInvoiceCanisterId_();
-    // let address: Text = Adapter.encodeAddress(Adapter.computeInvoiceSubaccount(id, caller));
     let address : Text = Adapter.encodeAddress(Account.accountIdentifier(canisterId, Account.principalToSubaccount(caller, id)));
 
     vaults_ids_map := Trie.put(vaults_ids_map, textKey(address), Text.equal, id).0;
@@ -336,15 +388,21 @@ shared ({ caller = installer_ }) actor class Multisig() = this {
         threshold = threshold;
         created_at = Time.now();
         admin = caller;
+        // balance = {icp:Nat64 = Nat64.fromNat(0); ckbtc:Nat = 0};
       }
     };
   };
 
-  
-  // get multisig vault
-  public shared func get_multisig_balance(vault: Text): async Types.Tokens {
-    let balance = await Ledger_ICP.account_balance_dfx({account = vault});
-    return balance;
+  public shared func get_ckbtc_balance(vault: Text, owner: Principal): async Nat {
+    let id = switch (Trie.get(vaults_ids_map, textKey(vault), Text.equal)) {
+        case null { "" };
+        case (?v_id) { v_id };
+      };
+    let subAccount =Blob.toArray(Account.principalToSubaccount(owner, id));
+    // let subAccount =Account.principalToSubaccount(owner, id);
+    let ckBtcBalance = await Ckbtc_Ledger_ICP.icrc1_balance_of({owner = await getCanisterPrincipal(); subaccount = ?subAccount});
+    
+    return ckBtcBalance;
   };
 
   public type ReturnVault = {
@@ -352,10 +410,24 @@ shared ({ caller = installer_ }) actor class Multisig() = this {
     signers : [Principal];
     threshold : Nat;
     created_at : Int;
-    admin: Principal
+    admin: Principal;
   };
 
-  func get_vault_data(vault: Text):{ address: Text; multisig: ?ReturnVault} {
+  // get multisig vault
+  public shared func get_multisig_balance(vault: Text): async {icp: Nat64; ckbtc: Nat} {
+    let vault_obj = switch (Trie.get(vaults_map, textKey(vault), Text.equal)){
+      case null {
+          throw Error.reject("Vault does not exist: " # vault );
+      };
+      case (?v_obj){ v_obj}
+    };
+    let balance = await Ledger_ICP.account_balance_dfx({account = vault});
+    let ckbtc_balance = await get_ckbtc_balance(vault, vault_obj.admin);
+    return {icp = balance.e8s; ckbtc=ckbtc_balance};
+  };
+
+
+  func get_vault_data(vault: Text): { address: Text; multisig: ?ReturnVault} {
     switch (Trie.get(vaults_map, textKey(vault), Text.equal)) {
       case null { 
         return { address = vault; multisig = null }
@@ -366,7 +438,7 @@ shared ({ caller = installer_ }) actor class Multisig() = this {
           signers = List.toArray(vaultData.signers);
           threshold = vaultData.threshold;
           created_at = vaultData.created_at;
-          admin= vaultData.admin
+          admin= vaultData.admin;
         };
         return {address = vault; multisig = ?multisig} 
       };
@@ -386,6 +458,22 @@ shared ({ caller = installer_ }) actor class Multisig() = this {
           vaultList := List.push(get_vault_data(vault), vaultList);
         });
         List.toArray(vaultList)
+      };
+    };
+  };
+
+  public shared ({caller}) func get_all_vault_balace() : async [{ address: Text; balance: {icp: Nat64; ckbtc: Nat}}] {
+    switch (Trie.get(signer_vaults, key(caller), Principal.equal)) {
+      case null { 
+        return [];
+       };
+      case (?oldVaults) {
+        var vaultWithBalance = List.nil<{ address: Text; balance: {icp: Nat64; ckbtc: Nat}}>();
+        for (vault in List.toIter(oldVaults)) {
+          let balance = await get_multisig_balance(vault);
+          vaultWithBalance := List.push({address = vault; balance}, vaultWithBalance);
+        };
+        List.toArray(vaultWithBalance);
       };
     };
   };
@@ -530,7 +618,19 @@ shared ({ caller = installer_ }) actor class Multisig() = this {
     let newApprovals = List.push(caller, approvals);
 
     if(List.size(newApprovals) == obj.threshold){
+      if(obj.currencyType == "ICP"){
       let result = await transfer_icp(vault : Text, obj.to : Text, vault_obj.admin: Principal, obj.amount)
+      }
+      else if(obj.currencyType == "CKBTC") {
+        let subAccount = await get_nat8_from_account_id(obj.to);
+        // let subAccount = await get_blob_from_account_id(obj.to);
+        let result = await transfer_ckBTC(vault : Text, {owner = obj.toPrincipal; subaccount = ?subAccount}, vault_obj.admin: Principal, obj.amount)
+      }
+      else if(obj.currencyType == "CKETH") {
+        let subAccount = await get_nat8_from_account_id(obj.to);
+        // let subAccount = await get_blob_from_account_id(obj.to);
+        let result = await transfer_ckEth(vault : Text, {owner = obj.toPrincipal; subaccount = ?subAccount}, vault_obj.admin: Principal, obj.amount)
+      }
     };
     
     let newTransaction : Transaction = {
@@ -543,6 +643,8 @@ shared ({ caller = installer_ }) actor class Multisig() = this {
       amount = obj.amount;
       created_at = obj.created_at;
       completed = if(List.size(newApprovals) == obj.threshold){ true } else{ false };
+      currencyType = obj.currencyType;
+      toPrincipal = obj.toPrincipal;
     };
 
     transactions := Trie.replace(
@@ -622,6 +724,8 @@ shared ({ caller = installer_ }) actor class Multisig() = this {
     from_vault : Text,
     to : Text,
     amount : Nat,
+    currencyType: Text,
+    reciverPrincipal: Text
   ) : async Transaction {
 
     let vault_obj = switch (Trie.get(vaults_map, textKey(from_vault), Text.equal)) {
@@ -664,9 +768,89 @@ shared ({ caller = installer_ }) actor class Multisig() = this {
       amount = amount;
       created_at = Time.now();
       completed = false;
+      currencyType = currencyType;
+      toPrincipal = Principal.fromText(reciverPrincipal);
     };
     transactions := Trie.put(transactions, textKey(id), Text.equal, newTransaction).0;
     return newTransaction;
   };
+
+  public shared ({caller}) func save_2FA_data(
+    base32_secret:Text,
+    url:Text,
+    enabled: Bool,
+    verified: Bool,
+    tfaToken: Text 
+  ): async TowFAType {
+    let user2faData = switch(Trie.get(two_f_a_map, key(caller), Principal.equal)){
+      case null {
+        {
+          base32_secret = "";
+          enabled = false;
+          url = "";
+          verified = false;
+          tfaToken = ""
+        };
+      };
+      case (?data){
+        data
+      }
+    };
+    let newSecrates = {
+      base32_secret;
+      enabled =  enabled;
+      url;
+      verified = verified;
+      tfaToken = tfaToken
+    };
+    if(user2faData.base32_secret == ""){
+      two_f_a_map := Trie.put(two_f_a_map, key(caller), Principal.equal, newSecrates).0;
+    }
+    else{
+      two_f_a_map := Trie.replace(two_f_a_map, key(caller), Principal.equal, ?newSecrates).0;
+    };
+    return newSecrates;
+  };
+
+  public shared query ({caller}) func get_2FA_data(): async TowFAType {
+    let user2faData = switch(Trie.get(two_f_a_map, key(caller), Principal.equal)){
+      case null {
+        {
+          base32_secret = "";
+          enabled = false;
+          url = "";
+          verified = false;
+          tfaToken = ""
+        };
+      };
+      case (?data){
+        data
+      }
+    };
+  };
+  
+  public shared func get_btc_address(vault:Text): async Text{
+
+    let vault_obj = switch (Trie.get(vaults_map, textKey(vault), Text.equal)){
+      case null {
+          throw Error.reject("Vault does not exist: " # vault );
+      };
+      case (?v_obj){ v_obj}
+    };
+    
+    let signers = vault_obj.signers;
+
+    let id = switch (Trie.get(vaults_ids_map, textKey(vault), Text.equal)) {
+      case null { "" };
+      case (?v_id) { v_id };
+    };
+
+    let subaccount = Account.principalToSubaccount(vault_obj.admin, id);
+
+    // let canister_subaccount = Blob.toArray(Account.principalToSubaccount(owner, id));
+    // let destination_subaccount = await get_nat8_from_account_id(destination);
+    let address = await CKBTC_MINTER.get_btc_address({owner = ?getInvoiceCanisterId_(); subaccount = ?subaccount});
+    return address;
+  }
 
 }

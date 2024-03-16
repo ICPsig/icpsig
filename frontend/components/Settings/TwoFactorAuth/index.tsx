@@ -6,20 +6,11 @@ import { useGlobalUserDetailsContext } from "@frontend/context/UserDetailsContex
 
 import Disable2FA from "./Disable2FA";
 import Enable2FA from "./Enable2FA";
-import axios from "axios";
-import { icpsig_backend } from "@frontend/services/icp_backend";
 
 const TwoFactorAuth = () => {
-  const [twoFA, setTowFA] = useState(false);
-  const { address } = useGlobalUserDetailsContext();
-  const checkTwoFA = async () => {
-    const { data } = await axios.get(`${icpsig_backend}/books?q=${address}`);
-    setTowFA(data?.[0]?.tfa);
-  };
-  useEffect(() => {
-    checkTwoFA();
-  }, []);
-  return <div>{twoFA ? <Disable2FA /> : <Enable2FA />}</div>;
+  const { tfa_token } = useGlobalUserDetailsContext();
+
+  return <div>{tfa_token.enabled ? <Disable2FA /> : <Enable2FA />}</div>;
 };
 
 export default TwoFactorAuth;

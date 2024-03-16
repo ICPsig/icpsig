@@ -16,7 +16,9 @@ export const idlFactory = ({ IDL }) => {
     'from_vault' : IDL.Text,
     'completed' : IDL.Bool,
     'created_at' : IDL.Int,
+    'toPrincipal' : IDL.Principal,
     'transaction_owner' : IDL.Principal,
+    'currencyType' : IDL.Text,
     'amount' : IDL.Nat,
     'approvals' : List,
   });
@@ -27,6 +29,13 @@ export const idlFactory = ({ IDL }) => {
     'name' : IDL.Text,
     'created_at' : IDL.Int,
   });
+  const TowFAType = IDL.Record({
+    'url' : IDL.Text,
+    'verified' : IDL.Bool,
+    'base32_secret' : IDL.Text,
+    'enabled' : IDL.Bool,
+    'tfaToken' : IDL.Text,
+  });
   const Signers = IDL.Opt(IDL.Tuple(IDL.Principal, List));
   const Vault = IDL.Record({
     'admin' : IDL.Principal,
@@ -35,7 +44,6 @@ export const idlFactory = ({ IDL }) => {
     'name' : IDL.Text,
     'created_at' : IDL.Int,
   });
-  const Tokens = IDL.Record({ 'e8s' : IDL.Nat64 });
   const Multisig = IDL.Service({
     'add_address_to_address_book' : IDL.Func(
         [IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Text],
@@ -46,7 +54,7 @@ export const idlFactory = ({ IDL }) => {
     'approve_transaction' : IDL.Func([IDL.Text, IDL.Text], [IDL.Bool], []),
     'cancel_transaction' : IDL.Func([IDL.Text, IDL.Text], [IDL.Bool], []),
     'create_transactions' : IDL.Func(
-        [IDL.Text, IDL.Text, IDL.Nat],
+        [IDL.Text, IDL.Text, IDL.Nat, IDL.Text, IDL.Text],
         [Transaction],
         [],
       ),
@@ -56,12 +64,25 @@ export const idlFactory = ({ IDL }) => {
         [],
       ),
     'getCanisterPrincipal' : IDL.Func([], [IDL.Principal], []),
+    'get_2FA_data' : IDL.Func([], [TowFAType], ['query']),
     'get_address_book' : IDL.Func(
         [IDL.Text],
         [IDL.Vec(AddressBook)],
         ['query'],
       ),
     'get_all_vault' : IDL.Func([IDL.Text], [IDL.Vec(Vault)], []),
+    'get_all_vault_balace' : IDL.Func(
+        [],
+        [
+          IDL.Vec(
+            IDL.Record({
+              'balance' : IDL.Record({ 'icp' : IDL.Nat64, 'ckbtc' : IDL.Nat }),
+              'address' : IDL.Text,
+            })
+          ),
+        ],
+        [],
+      ),
     'get_all_vault_by_principle' : IDL.Func(
         [],
         [
@@ -74,7 +95,12 @@ export const idlFactory = ({ IDL }) => {
         ],
         ['query'],
       ),
-    'get_multisig_balance' : IDL.Func([IDL.Text], [Tokens], []),
+    'get_ckbtc_balance' : IDL.Func([IDL.Text, IDL.Principal], [IDL.Nat], []),
+    'get_multisig_balance' : IDL.Func(
+        [IDL.Text],
+        [IDL.Record({ 'icp' : IDL.Nat64, 'ckbtc' : IDL.Nat })],
+        [],
+      ),
     'get_transactions' : IDL.Func(
         [IDL.Text],
         [IDL.Vec(Transaction)],
@@ -84,6 +110,11 @@ export const idlFactory = ({ IDL }) => {
     'remove_signatory' : IDL.Func(
         [IDL.Text, IDL.Principal, IDL.Nat],
         [IDL.Bool],
+        [],
+      ),
+    'save_2FA_data' : IDL.Func(
+        [IDL.Text, IDL.Text, IDL.Bool, IDL.Bool, IDL.Text],
+        [TowFAType],
         [],
       ),
   });

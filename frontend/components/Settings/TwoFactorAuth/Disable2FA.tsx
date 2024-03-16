@@ -15,43 +15,33 @@ import CancelBtn from "../CancelBtn";
 import RemoveBtn from "../RemoveBtn";
 import axios from "axios";
 import { icpsig_backend } from "@frontend/services/icp_backend";
+import useIcpVault from "@frontend/hooks/useIcpVault";
 
 const Disable2FA = ({ className }: { className?: string }) => {
   const [loading, setLoading] = useState<boolean>(false);
+  const { save_2FA_data } = useIcpVault();
 
-  const { two_factor_auth, address, setUserDetailsContextState } =
-    useGlobalUserDetailsContext();
+  const { setUserDetailsContextState } = useGlobalUserDetailsContext();
   const [showModal, setShowModal] = useState<boolean>(false);
 
   const handleDisable2FA = async () => {
-    // don't submit if loading or if user is already 2FA enabled
-    // if (loading || !address || !two_factor_auth?.enabled) return
-
     setLoading(true);
     try {
-      // send as string just in case it starts with 0
-      axios.put(`${icpsig_backend}/books/1`, { address, tfa: false });
-
-      // const { data: disable2FAData, error: disable2FAError } =
-      //   disable2FARes as {
-      //     data: string;
-      //     error: string;
-      //   };
-
-      // if (disable2FAError || !disable2FAData) {
-      //   setLoading(false);
-      //   queueNotification({
-      //     header: "Failed",
-      //     message: disable2FAError,
-      //     status: NotificationStatus.ERROR,
-      //   });
-      //   return;
-      // }
+      const { data, error } = await save_2FA_data("", "", false, false);
+      if (error) {
+        setLoading(false);
+        queueNotification({
+          header: "Failed",
+          message: error,
+          status: NotificationStatus.ERROR,
+        });
+        return;
+      }
       setTimeout(() => {
         setUserDetailsContextState((prevState) => {
           return {
             ...prevState,
-            two_factor_auth: null,
+            two_factor_auth: data,
           };
         });
         queueNotification({

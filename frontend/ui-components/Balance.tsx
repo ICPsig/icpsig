@@ -25,8 +25,8 @@ const Balance = ({ address, className, onChange, isCkbtc }: Props) => {
       setLoading(true);
       const { data, error } = await get_multisig_balance(address);
       if (data && !error) {
-        setBalance(convertE8sToNumber(data.e8s));
-        onChange(convertE8sToNumber(data.e8s));
+        setBalance(convertE8sToNumber(isCkbtc ? data.ckbtc : data?.icp?.e8s));
+        onChange(convertE8sToNumber(isCkbtc ? data.ckbtc : data?.icp?.e8s));
       }
       setLoading(false);
       // if (balance) setBalance(balance);

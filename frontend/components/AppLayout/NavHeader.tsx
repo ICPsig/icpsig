@@ -20,7 +20,7 @@ interface Props {
 }
 
 const NavHeader: FC<Props> = ({ sideDrawer, setSideDrawer }) => {
-  const { account } = useGlobalIdentityContext();
+  const { principal } = useGlobalIdentityContext();
   return (
     <Header className="bg-bg-main flex flex-row items-center p-0 h-[70px]">
       <section className="hidden lg:block w-[180px]"></section>
@@ -43,7 +43,7 @@ const NavHeader: FC<Props> = ({ sideDrawer, setSideDrawer }) => {
           </p>
         </article>
         <article className="ml-auto flex items-center gap-x-3">
-          {account && <Notification />}
+          {principal && <Notification />}
           <AddressDropdown />
           <a
             href="https://docs.polkasafe.xyz/"

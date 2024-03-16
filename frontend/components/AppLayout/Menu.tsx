@@ -43,7 +43,7 @@ const Menu: FC<Props> = ({ className }) => {
     activeMultisig,
     multisigSettings,
   } = useGlobalUserDetailsContext();
-  const { account: userAddress } = useGlobalIdentityContext();
+  const { principal: userAddress } = useGlobalIdentityContext();
   const [selectedMultisigAddress, setSelectedMultisigAddress] = useState(
     activeMultisig || localStorage.getItem("active_multisig") || "",
   );

@@ -89,11 +89,12 @@ export interface I2FASettings {
 export interface IGenerate2FAResponse {
   base32_secret: string;
   url: string;
+  enabled?: boolean;
+  verified?: boolean;
 }
 
 export interface I2FAToken {
   token: string;
-  created_at: Date;
 }
 
 export interface UserDetailsContextType {
@@ -117,7 +118,8 @@ export interface UserDetailsContextType {
   setIdentityBackend: any;
   transactionFields: ITransactionFields;
   two_factor_auth?: I2FASettings;
-  tfa_token?: I2FAToken;
+  tfa_token?: I2FASettings;
+  balanceLoading: boolean;
 }
 
 export enum Wallet {
@@ -214,6 +216,7 @@ export interface IMultisigAddress {
   proxy?: string;
   disabled?: boolean;
   type?: "fund" | "sent";
+  balance?: any;
 }
 
 export interface IUserResponse extends IUser {

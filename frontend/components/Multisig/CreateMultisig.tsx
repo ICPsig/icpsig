@@ -41,7 +41,6 @@ const CreateMultisig: React.FC<IMultisigProps> = ({
   onCancel,
   homepage = false,
 }) => {
-  const { account: address } = useGlobalIdentityContext();
   const {
     setUserDetailsContextState,
     address: userAddress,

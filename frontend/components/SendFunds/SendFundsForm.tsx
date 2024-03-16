@@ -211,6 +211,7 @@ const SendFundsForm = ({
         activeMultisig,
         recipients?.[0],
         convertToICPFormat,
+        "ICP",
       );
 
       if (multisigVaultTx) {

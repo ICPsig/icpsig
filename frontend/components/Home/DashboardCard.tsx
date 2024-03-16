@@ -26,6 +26,8 @@ import Avatar from "../Avatar/Avatar";
 import useIcpVault from "@frontend/hooks/useIcpVault";
 import convertE8sToNumber from "@frontend/utils/convertE8sToNumber";
 import Loader from "@frontend/ui-components/Loader";
+import { encodePrincipalToEthAddress } from '@dfinity/cketh';
+import { useGlobalIdentityContext } from "@frontend/context/IdentityProviderContext";
 
 interface IDashboardCard {
   className?: string;
@@ -45,10 +47,14 @@ const DashboardCard = ({
   setOpenTransactionModal,
 }: IDashboardCard) => {
   const { activeMultisig, multisigAddresses } = useGlobalUserDetailsContext();
+  const {principal} = useGlobalIdentityContext()
   const [openFundMultisigModal, setOpenFundMultisigModal] = useState(false);
   const { get_multisig_balance } = useIcpVault();
   const [loading, setLoading] = useState(true);
-  const [balance, setBalance] = useState("0");
+  const [balance, setBalance] = useState<{ icp: string; ckbtc: string }>({
+    icp: "0",
+    ckbtc: "0",
+  });
 
   const currentMultisig = multisigAddresses?.find(
     (item) => item.address === activeMultisig,
@@ -59,13 +65,20 @@ const DashboardCard = ({
       setLoading(true);
       const { data, error } = await get_multisig_balance(activeMultisig);
       if (data && !error) {
-        setBalance(convertE8sToNumber(data.e8s));
+        setBalance({
+          icp: convertE8sToNumber(data.icp || 0),
+          ckbtc: convertE8sToNumber(data.ckbtc || 0),
+        });
       }
       setLoading(false);
     } catch (err) {
       console.log("Err from fetchEthBalance", err);
     }
   };
+
+  const generateEthAddress = ()=>{
+    console.log(encodePrincipalToEthAddress(principal))
+  }
 
   useEffect(() => {
     if (activeMultisig) fetchEthBalance(activeMultisig);
@@ -215,7 +228,17 @@ const DashboardCard = ({
               {loading ? (
                 <Loader />
               ) : (
-                <span className="text-white">{balance}</span>
+                <span className="text-white">{balance.icp}</span>
+              )}
+            </div>
+          </div>
+          <div>
+            <div className="text-white">CKBTC</div>
+            <div className="font-bold text-lg text-primary">
+              {loading ? (
+                <Loader />
+              ) : (
+                <span className="text-white">{balance.ckbtc}</span>
               )}
             </div>
           </div>

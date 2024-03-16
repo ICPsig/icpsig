@@ -5,6 +5,7 @@ import { Button, Form, Input, Modal, QRCode } from "antd";
 import React, { useState } from "react";
 import { useGlobalUserDetailsContext } from "@frontend/context/UserDetailsContext";
 import {
+  I2FASettings,
   IGenerate2FAResponse,
   IUser,
   NotificationStatus,
@@ -26,6 +27,9 @@ import { generateBitcoinAddress } from "@frontend/utils/generateBitcoinAddress";
 import { icp_vault } from "src/declarations/icp_vault";
 import { icpsig_backend } from "@frontend/services/icp_backend";
 import axios from "axios";
+import { get2FASecret } from "@frontend/utils/2fa/generate2FASecret";
+import useIcpVault from "@frontend/hooks/useIcpVault";
+import { verify2FASecret } from "@frontend/utils/2fa/verify2FA";
 
 const Enable2FA = ({ className }: { className?: string }) => {
   const [loading, setLoading] = useState<boolean>(false);
@@ -36,45 +40,53 @@ const Enable2FA = ({ className }: { className?: string }) => {
     useGlobalUserDetailsContext();
   const [showModal, setShowModal] = useState<boolean>(false);
 
-  const [tFaSecret, setTFaSecret] = useState<IGenerate2FAResponse>();
+  const [tFaSecret, setTFaSecret] = useState<I2FASettings>();
 
   const [authCode, setAuthCode] = useState<number>();
+
+  const { save_2FA_data } = useIcpVault();
 
   const fetch2FASecret = async () => {
     // don't submit if loading or if user is already 2FA enabled
     if (loading || !address || two_factor_auth?.enabled) return;
     setQrCodeLoading(true);
-    setTimeout(() => {
-      const { data: generate2FaData, error: generate2FaError } = {
-        data: {
-          base32_secret: "QJJLNSRRBZUPLEGJI4J7Q6T3",
-          url: "otpauth://totp/Polkassembly:13316?issuer=Polkassembly&secret=QJJLNSRRBZUPLEGJI4J7Q6T3&algorithm=SHA1&digits=6&period=30",
-        },
-        error: null,
-      };
-      // const { data: generate2FaData, error: generate2FaError } = await (
-      //   await fetch(`${FIREBASE_FUNCTIONS_URL}/api/2fa/generate2FASecret`)
-      // ).json()
 
-      console.log(generate2FaData);
-      if (
-        generate2FaError ||
-        !generate2FaData ||
-        !generate2FaData.base32_secret ||
-        !generate2FaData.url
-      ) {
-        queueNotification({
-          header: "Failed!",
-          message: generate2FaError,
-          status: NotificationStatus.ERROR,
-        });
-        console.error("2FA error : ", generate2FaError);
-        return;
-      }
+    const generate2FaData = get2FASecret(address);
 
-      setTFaSecret(generate2FaData);
-      setQrCodeLoading(false);
-    }, 2500);
+    if (
+      !generate2FaData ||
+      !generate2FaData?.base32_secret ||
+      !generate2FaData?.url
+    ) {
+      queueNotification({
+        header: "Failed!",
+        message: "There is some issue with generating Secret",
+        status: NotificationStatus.ERROR,
+      });
+      console.error("2FA error :");
+      return;
+    }
+    const { data, error } = await save_2FA_data(
+      generate2FaData.base32_secret,
+      generate2FaData.url,
+      false,
+      false,
+    );
+
+    if (error || !data) {
+      queueNotification({
+        header: "Failed!",
+        message: "There is some issue with saving Secret",
+        status: NotificationStatus.ERROR,
+      });
+      console.error("2FA error :");
+      return;
+    }
+
+    console.log(data, "2FA Line 81");
+
+    setTFaSecret(data);
+    setQrCodeLoading(false);
   };
 
   const handleModalOpen = async () => {
@@ -91,47 +103,56 @@ const Enable2FA = ({ className }: { className?: string }) => {
       if (!authCode || Number.isNaN(authCode))
         throw new Error("Please input a valid auth code");
 
-      setTimeout(() => {
-        const { data: verify2FAData, error: verify2FAError } = {
-          data: {
-            two_factor_auth:
-              "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJhZGRyZXNzZXMiOlsiNUZxQjllVjNDNFRGMmo0NmJhb2VxbXo5OHJXQ3pFY3E0dGQxMURBMlpRSjFiN04zIl0sImRlZmF1bHRfYWRkcmVzcyI6IjVGcUI5ZVYzQzRURjJqNDZiYW9lcW16OThyV0N6RWNxNHRkMTFEQTJaUUoxYjdOMyIsImVtYWlsIjoiIiwiZW1haWxfdmVyaWZpZWQiOmZhbHNlLCJpYXQiOjE3MDc5NTU0NTYsImlkIjoxMzMxNiwicm9sZXMiOnsiYWxsb3dlZFJvbGVzIjpbInVzZXIiXSwiY3VycmVudFJvbGUiOiJ1c2VyIn0sInN1YiI6IjEzMzE2IiwidXNlcm5hbWUiOiJBbGVlbV9BbGFtIiwid2ViM3NpZ251cCI6dHJ1ZSwiaXMyRkFFbmFibGVkIjp0cnVlLCJleHAiOjE3MTY1OTU0NTZ9.d8jBR_3UIO6AbeshcZ2caF0afUN9z3Geov46BjYIePqFQdfqXe54CUO3n7V1_sQT-KGep3aq2JpNpnt_8OICS8upAh5YJPDpZF_ZZuaCE7w007UI0StMgK8GJGH8KJ8IJl0q-6W1v4U3QliwlYR9UGw-QGKSnE53JPEuafL6s4SvyVaTPXJX5A7wF4n2AzXyEL8XthCsGhF0eUOCjlyPotquwgxZGkjcybUlwD60Gx725fOoiC4yJq9JHIC7ZHoQ6UK9YFjNlhugBGCaLU1cPH81oxIfvCxvS2AMLEE0Bc9e2-l4R1Ow6zOSX_XwW7DHGhmwZYewQvirQa1OHK4PKA",
-          },
-          error: null,
-        };
-
-        if (verify2FAError || !verify2FAData) {
-          setLoading(false);
-          queueNotification({
-            header: "Failed",
-            message: verify2FAError,
-            status: NotificationStatus.ERROR,
-          });
-          return;
-        }
-
-        setUserDetailsContextState((prevState: any) => {
-          return {
-            ...prevState,
-            two_factor_auth: verify2FAData.two_factor_auth,
-          };
-        });
-
-        queueNotification({
-          header: "Success",
-          message: "Two factor authentication enabled successfully!",
-          status: NotificationStatus.SUCCESS,
-        });
-
-        setShowModal(false);
-      }, 2000);
-
-      axios.put(`${icpsig_backend}/books/1`, { address, tfa: true });
-
       // send as string just in case it starts with 0
-      // const { data: verify2FAData, error: verify2FAError } = await (
-      //   await fetch(`api/2fa/verify2FA`)
-      // ).json();
+      const { data: verify2FAData, error: verify2FAError } = verify2FASecret(
+        Number(authCode),
+        tFaSecret,
+        address,
+      );
+
+      if (verify2FAError) {
+        setLoading(false);
+        queueNotification({
+          header: "Failed",
+          message: verify2FAError,
+          status: NotificationStatus.ERROR,
+        });
+        return;
+      }
+
+      const { data, error } = await save_2FA_data(
+        tFaSecret.base32_secret,
+        tFaSecret.url,
+        true,
+        true,
+      );
+
+      console.log(data, "2FA Line 125");
+
+      if (error) {
+        queueNotification({
+          header: "Failed!",
+          message: error,
+          status: NotificationStatus.ERROR,
+        });
+        console.error("2FA verify error :");
+        return;
+      }
+
+      setUserDetailsContextState((prevState: any) => {
+        return {
+          ...prevState,
+          two_factor_auth: data,
+        };
+      });
+
+      queueNotification({
+        header: "Success",
+        message: "Two factor authentication enabled successfully!",
+        status: NotificationStatus.SUCCESS,
+      });
+
+      setShowModal(false);
     } catch (error) {
       setLoading(false);
       queueNotification({

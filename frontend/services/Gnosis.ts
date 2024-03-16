@@ -169,8 +169,7 @@ export class IdentityBackendService {
     amount: bigint,
   ) => {
     try {
-      const data = await icp_vault.create_transactions(vault, to, amount);
-      return { data, error: null };
+      console.log("something");
     } catch (error) {
       console.log("error from create_transactions", error);
       return { data: null, error };

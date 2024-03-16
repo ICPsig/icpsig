@@ -24,7 +24,7 @@ interface IAddress {
 }
 
 const AddressDropdown = () => {
-  const { principal, setPrincipal, setAccounts, setAuthClient, setIdentity } =
+  const { principal, setPrincipal, setAuthClient, logout } =
     useGlobalIdentityContext();
   const { addressBook, setUserDetailsContextState } =
     useGlobalUserDetailsContext();
@@ -44,11 +44,7 @@ const AddressDropdown = () => {
         multisigAddresses: [],
       };
     });
-    setPrincipal("");
-    setAccounts("");
-    setAuthClient("");
-    setIdentity("");
-    toggleVisibility(false);
+    await logout();
     return navigate("/", { replace: true });
   };
 
@@ -127,12 +123,11 @@ const AddressDropdown = () => {
                 <CopyIcon className="text-base text-primary cursor-pointer" />
               </button>
             </p>
-            <Balance className="ml-0" address={principal} />
           </div>
           <div className="w-full">
             <p className="border-t border-text_secondary flex items-center text-normal text-sm justify-between w-full p-2">
               <span className="text-text_secondary">Wallet</span>
-              <span className="text-white capitalize">Pludge-Wallet</span>
+              <span className="text-white capitalize">Internet-Identity</span>
             </p>
           </div>
           <Button

@@ -32,8 +32,8 @@ const Home = () => {
   const [transactionLoading] = useState(false);
   const [isOnchain, setIsOnchain] = useState(true);
   const [openTransactionModal, setOpenTransactionModal] = useState(false);
-  
-  const { account, principal } = useGlobalIdentityContext();
+
+  const { principal } = useGlobalIdentityContext();
   const [vault, setVault] = useState<string>("");
   const [toAddress, setToAddress] = useState<string>("");
   const [txdId, setTxdId] = useState<string>("");
@@ -63,16 +63,16 @@ const Home = () => {
   //   setVault(data);
   // };
 
-  const handleSendMoney = async () => {
-    const { data, error } = await create_transactions(
-      vault,
-      toAddress,
-      BigInt(1),
-    );
-    console.log(data);
-    console.log(error);
-    setTxdId(data);
-  };
+  // const handleSendMoney = async () => {
+  //   const { data, error } = await create_transactions(
+  //     vault,
+  //     toAddress,
+  //     BigInt(1),
+  //   );
+  //   console.log(data);
+  //   console.log(error);
+  //   setTxdId(data);
+  // };
 
   const handleApproveTransaction = async () => {
     const { data, error } = await approve_transaction(vault, txdId);
@@ -82,7 +82,7 @@ const Home = () => {
 
   return (
     <>
-      {account ? (
+      {principal ? (
         <>
           {loading ? (
             <Spinner size="large" />

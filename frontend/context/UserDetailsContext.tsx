@@ -21,6 +21,7 @@ import { convertSafeMultisig } from "@frontend/utils/convertSafeData/convertSafe
 import { useGlobalIdentityContext } from "./IdentityProviderContext";
 import useIcpVault from "@frontend/hooks/useIcpVault";
 import { VaultAgentContext } from "./IcpVaultAgentProvider";
+import convertE8sToNumber from "@frontend/utils/convertE8sToNumber";
 
 const initialUserDetailsContext: UserDetailsContextType = {
   activeMultisig: localStorage.getItem("active_multisig") || "",
@@ -270,6 +271,7 @@ const initialUserDetailsContext: UserDetailsContextType = {
       subfields: {},
     },
   },
+  balanceLoading: false,
 };
 
 export const UserDetailsContext: React.Context<UserDetailsContextType> =
@@ -289,18 +291,29 @@ export const UserDetailsProvider = ({
   const navigate = useNavigate();
   const [identityBackend, setIdentityBackend] =
     useState<IdentityBackendService>({} as any);
+
   const { icpVaultBackend } = useContext(VaultAgentContext);
-  const { get_all_vault_by_principle, get_address_book } = useIcpVault();
+  const {
+    get_all_vault_by_principle,
+    get_address_book,
+    get_2FA_data,
+    get_all_vault_balance,
+  } = useIcpVault();
 
   const [loading, setLoading] = useState(false);
 
+  const [balanceLoading, setBalanceLoading] = useState(false);
+
   const connectAddress = async () => {
-    if (!get_all_vault_by_principle && !get_address_book) {
+    if (!get_all_vault_by_principle || !get_address_book || !address) {
       return;
     }
     setLoading(true);
     const { data: userData, error: connectAddressErr } =
       await get_all_vault_by_principle();
+
+    const { data: two_factor_auth, error } = await get_2FA_data();
+    console.log(two_factor_auth);
 
     console.log("all vault", userData);
     const { data: addressBook } = await get_address_book(address);
@@ -327,6 +340,7 @@ export const UserDetailsProvider = ({
             userData?.notification_preferences ||
             initialUserDetailsContext.notification_preferences,
           transactionFields: initialUserDetailsContext.transactionFields,
+          tfa_token: two_factor_auth,
         };
       });
     } else {
@@ -337,33 +351,60 @@ export const UserDetailsProvider = ({
     setLoading(false);
   };
 
-  useEffect(() => {
-    if (!address) {
+  const handleMultisigBalance = async () => {
+    if (!get_all_vault_balance) {
       return;
     }
-    if (localStorage.getItem("address") !== address) {
-      localStorage.removeItem("signature");
-      localStorage.removeItem("address");
-      setUserDetailsContextState(initialUserDetailsContext);
-      navigate("/", { replace: true });
-      setLoading(false);
+    setBalanceLoading(true);
+    const { data: balanceData, error: balanceErr } =
+      await get_all_vault_balance();
+
+    if (balanceErr) {
+      console.log(balanceErr, "BalanceError");
+      setBalanceLoading(false);
       return;
     }
-    if (localStorage.getItem("signature")) {
-      connectAddress();
-    } else {
-      localStorage.clear();
-      setLoading(false);
-      navigate("/");
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [address]);
+
+    const getBalance = (address: string) => {
+      const balance = balanceData.filter((a) => a.address === address)?.[0]
+        .balance;
+      console.log(balance, "balance");
+      return balance;
+    };
+
+    const multisigPayload = userDetailsContextState.multisigAddresses.map(
+      (multisig) => ({
+        ...multisig,
+        balance: {
+          icp: convertE8sToNumber(getBalance(multisig.address)?.icp || 0),
+          ckbtc: convertE8sToNumber(getBalance(multisig.address)?.ckbtc || 0),
+        },
+      }),
+    );
+    console.log(multisigPayload);
+    setUserDetailsContextState((prevState) => {
+      return {
+        ...prevState,
+        multisigAddresses: multisigPayload || [],
+      };
+    });
+    setBalanceLoading(false);
+  };
 
   useEffect(() => {
-    if (!address && !icpVaultBackend) {
+    if (!address || !icpVaultBackend) {
       return;
     }
     connectAddress();
+  }, [address, icpVaultBackend]);
+
+  useEffect(() => {
+    if (!address || !icpVaultBackend) {
+      return;
+    }
+    if (userDetailsContextState.multisigAddresses.length > 0) {
+      handleMultisigBalance();
+    }
   }, [address, icpVaultBackend]);
 
   return (

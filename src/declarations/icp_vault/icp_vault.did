@@ -12,13 +12,22 @@ type Transaction =
    approvals: List;
    completed: bool;
    created_at: int;
+   currencyType: text;
    from_vault: text;
    id: text;
    threshold: nat;
    to: text;
+   toPrincipal: principal;
    transaction_owner: principal;
  };
-type Tokens = record {e8s: nat64;};
+type TowFAType = 
+ record {
+   base32_secret: text;
+   enabled: bool;
+   tfaToken: text;
+   url: text;
+   verified: bool;
+ };
 type Signers = 
  opt record {
        principal;
@@ -39,24 +48,38 @@ type Multisig =
    add_signatory: (text, text, nat) -> (bool);
    approve_transaction: (text, text) -> (bool);
    cancel_transaction: (text, text) -> (bool);
-   create_transactions: (text, text, nat) -> (Transaction);
+   create_transactions: (text, text, nat, text, text) -> (Transaction);
    create_vault: (text, vec text, nat) ->
     (record {
        address: text;
        multisig: ReturnVault;
      });
    getCanisterPrincipal: () -> (principal);
+   get_2FA_data: () -> (TowFAType) query;
    get_address_book: (text) -> (vec AddressBook) query;
    get_all_vault: (text) -> (vec Vault);
+   get_all_vault_balace: () ->
+    (vec record {
+           address: text;
+           balance: record {
+                      ckbtc: nat;
+                      icp: nat64;
+                    };
+         });
    get_all_vault_by_principle: () ->
     (vec record {
            address: text;
            multisig: opt ReturnVault;
          }) query;
-   get_multisig_balance: (text) -> (Tokens);
+   get_ckbtc_balance: (text, principal) -> (nat);
+   get_multisig_balance: (text) -> (record {
+                                      ckbtc: nat;
+                                      icp: nat64;
+                                    });
    get_transactions: (text) -> (vec Transaction) query;
    greet: () -> (text) query;
    remove_signatory: (text, principal, nat) -> (bool);
+   save_2FA_data: (text, text, bool, bool, text) -> (TowFAType);
  };
 type List = 
  opt record {

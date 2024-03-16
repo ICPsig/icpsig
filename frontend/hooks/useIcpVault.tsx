@@ -3,7 +3,7 @@ import React, { useContext } from "react";
 
 export default function useIcpVault() {
   const { icpVaultBackend } = useContext(VaultAgentContext);
-  
+
   if (!icpVaultBackend) {
     return {
       add_address_to_address_book: null,
@@ -11,12 +11,15 @@ export default function useIcpVault() {
       create_vault: null,
       get_multisig_balance: null,
       get_all_vault_by_principle: null,
+      get_all_vault_balance: null,
       add_signatory: null,
       remove_signatory: null,
       approve_transaction: null,
       cancel_transaction: null,
       get_transactions: null,
       create_transactions: null,
+      save_2FA_data: null,
+      get_2FA_data: null,
       greet: null,
     };
   }
@@ -87,6 +90,7 @@ export default function useIcpVault() {
   const get_multisig_balance = async (vault: string) => {
     try {
       const data = await icpVaultBackend.get_multisig_balance(vault);
+      console.log(data);
       return { data, error: null };
     } catch (error) {
       console.log("error from get_multisig_balance", error);
@@ -97,6 +101,16 @@ export default function useIcpVault() {
   const get_all_vault_by_principle = async () => {
     try {
       const data = await icpVaultBackend.get_all_vault_by_principle();
+      return { data, error: null };
+    } catch (error) {
+      console.log("error from get_all_vault_by_principle", error);
+      return { data: null, error };
+    }
+  };
+
+  const get_all_vault_balance = async () => {
+    try {
+      const data = await icpVaultBackend.get_all_vault_balace();
       return { data, error: null };
     } catch (error) {
       console.log("error from get_all_vault_by_principle", error);
@@ -169,7 +183,7 @@ export default function useIcpVault() {
       const data = await icpVaultBackend.get_transactions(vault);
       return { data, error: null };
     } catch (error) {
-      console.log("error from cancel_transaction", error);
+      console.log("error from get_transaction", error);
       return { data: null, error };
     }
   };
@@ -178,9 +192,49 @@ export default function useIcpVault() {
     vault: string,
     to: string,
     amount: bigint,
+    currencyType = "ICP",
+    receiverPrincipal?: string,
   ) => {
     try {
-      const data = await icpVaultBackend.create_transactions(vault, to, amount);
+      const data = await icpVaultBackend.create_transactions(
+        vault,
+        to,
+        amount,
+        currencyType,
+        receiverPrincipal || "2vxsx-fae",
+      );
+      return { data, error: null };
+    } catch (error) {
+      console.log("error from create_transactions", error);
+      return { data: null, error };
+    }
+  };
+
+  const save_2FA_data = async (
+    base32_secret: string,
+    url: string,
+    enabled: boolean,
+    verify: boolean,
+    tfaToken: string = "",
+  ) => {
+    try {
+      const data = await icpVaultBackend.save_2FA_data(
+        base32_secret,
+        url,
+        enabled,
+        verify,
+        tfaToken,
+      );
+      return { data, error: null };
+    } catch (error) {
+      console.log("error from create_transactions", error);
+      return { data: null, error };
+    }
+  };
+
+  const get_2FA_data = async () => {
+    try {
+      const data = await icpVaultBackend.get_2FA_data();
       return { data, error: null };
     } catch (error) {
       console.log("error from create_transactions", error);
@@ -194,12 +248,15 @@ export default function useIcpVault() {
     create_vault,
     get_multisig_balance,
     get_all_vault_by_principle,
+    get_all_vault_balance,
     add_signatory,
     remove_signatory,
     approve_transaction,
     cancel_transaction,
     get_transactions,
     create_transactions,
+    save_2FA_data,
+    get_2FA_data,
     greet,
   };
 }
