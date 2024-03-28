@@ -20,8 +20,14 @@ import { convertSafeMultisig } from "@frontend/utils/convertSafeData/convertSafe
 
 import { useGlobalIdentityContext } from "./IdentityProviderContext";
 import useIcpVault from "@frontend/hooks/useIcpVault";
-import { VaultAgentContext } from "./IcpVaultAgentProvider";
+import { mainCanisterId, VaultAgentContext } from "./IcpVaultAgentProvider";
 import convertE8sToNumber from "@frontend/utils/convertE8sToNumber";
+import {
+  useCKBTCCanister,
+  useCKETHCanister,
+  useICPCanister,
+} from "@frontend/utils/ledgers";
+import { Principal } from "@dfinity/principal";
 
 const initialUserDetailsContext: UserDetailsContextType = {
   activeMultisig: localStorage.getItem("active_multisig") || "",
@@ -292,12 +298,17 @@ export const UserDetailsProvider = ({
   const [identityBackend, setIdentityBackend] =
     useState<IdentityBackendService>({} as any);
 
+  const icpLedger = useICPCanister();
+  const ckBtcLedger = useCKBTCCanister();
+  const ckEthLedger = useCKETHCanister();
+
   const { icpVaultBackend } = useContext(VaultAgentContext);
   const {
     get_all_vault_by_principle,
     get_address_book,
     get_2FA_data,
-    get_all_vault_balance,
+    get_multisig_balance,
+    get_subAccount,
   } = useIcpVault();
 
   const [loading, setLoading] = useState(false);
@@ -352,34 +363,63 @@ export const UserDetailsProvider = ({
   };
 
   const handleMultisigBalance = async () => {
-    if (!get_all_vault_balance) {
+    if (!get_multisig_balance || !userDetailsContextState.activeMultisig) {
       return;
     }
     setBalanceLoading(true);
-    const { data: balanceData, error: balanceErr } =
-      await get_all_vault_balance();
+    const { data: subAccount, error } = await get_subAccount(
+      userDetailsContextState.activeMultisig,
+    );
 
-    if (balanceErr) {
-      console.log(balanceErr, "BalanceError");
+    if (error) {
+      console.log(error, "subaccount");
       setBalanceLoading(false);
       return;
     }
-
-    const getBalance = (address: string) => {
-      const balance = balanceData.filter((a) => a.address === address)?.[0]
-        .balance;
-      console.log(balance, "balance");
-      return balance;
-    };
+    const balance = [
+      icpLedger.accountBalance({
+        accountIdentifier: userDetailsContextState.activeMultisig,
+      }),
+      ckBtcLedger.balance({
+        owner: Principal.fromText(mainCanisterId),
+        subaccount: subAccount || null,
+      }),
+      ckEthLedger.balance({
+        owner: Principal.fromText(mainCanisterId),
+        subaccount: subAccount || null,
+      }),
+    ];
+    console.log(new Date().toLocaleString());
+    const [icp, ckbtc, cketh] = (await Promise.all(balance)).values();
+    console.log({ icp, ckbtc, cketh });
+    console.log(new Date().toLocaleString());
+    // const icp = await icpLedger.accountBalance({
+    //   accountIdentifier: userDetailsContextState.activeMultisig,
+    // });
+    // const ckbtc = await ckBtcLedger.balance({
+    //   owner: Principal.fromText(mainCanisterId),
+    //   subaccount: subAccount || null,
+    // });
+    // const cketh = await ckEthLedger.balance({
+    //   owner: Principal.fromText(mainCanisterId),
+    //   subaccount: subAccount || null,
+    // });
+    // const { data: balanceData, error: balanceErr } = await get_multisig_balance(
+    //   userDetailsContextState.activeMultisig,
+    // );
 
     const multisigPayload = userDetailsContextState.multisigAddresses.map(
-      (multisig) => ({
-        ...multisig,
-        balance: {
-          icp: convertE8sToNumber(getBalance(multisig.address)?.icp || 0),
-          ckbtc: convertE8sToNumber(getBalance(multisig.address)?.ckbtc || 0),
-        },
-      }),
+      (multisig) =>
+        multisig.address == userDetailsContextState.activeMultisig
+          ? {
+              ...multisig,
+              balance: {
+                ICP: (Number(icp || 0) / 100000000).toFixed(4),
+                ckBTC: (Number(ckbtc || 0) / 100000000).toFixed(4),
+                ckETH: (Number(cketh || 0) / 100000000).toFixed(4),
+              },
+            }
+          : multisig,
     );
     console.log(multisigPayload);
     setUserDetailsContextState((prevState) => {
@@ -399,13 +439,13 @@ export const UserDetailsProvider = ({
   }, [address, icpVaultBackend]);
 
   useEffect(() => {
-    if (!address || !icpVaultBackend) {
+    if (!address || !userDetailsContextState.activeMultisig) {
       return;
     }
     if (userDetailsContextState.multisigAddresses.length > 0) {
       handleMultisigBalance();
     }
-  }, [address, icpVaultBackend]);
+  }, [userDetailsContextState.activeMultisig]);
 
   return (
     <UserDetailsContext.Provider
@@ -418,6 +458,8 @@ export const UserDetailsProvider = ({
         setIdentityBackend,
         setLoading,
         setUserDetailsContextState,
+        balanceLoading,
+        handleMultisigBalance,
       }}
     >
       <>{children}</>

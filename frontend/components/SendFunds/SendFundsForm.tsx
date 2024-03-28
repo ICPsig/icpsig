@@ -70,7 +70,9 @@ const SendFundsForm = ({
   const { activeMultisig, addressBook, address, transactionFields } =
     useGlobalUserDetailsContext();
   const { records } = useActiveMultisigContext();
-  const [selectedToken, setSelectedToken] = useState<string>("");
+  const [selectedToken, setSelectedToken] = useState<"ckBTC" | "ICP" | "ckETH">(
+    "ICP",
+  );
 
   const [note, setNote] = useState<string>("");
   const [loading, setLoading] = useState(false);
@@ -110,10 +112,12 @@ const SendFundsForm = ({
     subfields: { [subfield: string]: { name: string; value: string } };
   }>({ category: "none", subfields: {} });
 
-  const { create_transactions } = useIcpVault();
+  const { create_transactions, retrieve_btc_from_ckBtc } = useIcpVault();
 
   const [sendMode, setSendMode] = useState<ESendMode>(ESendMode.SEND);
   const [ckBTCAddress, setCkBTCAddress] = useState<string>("");
+  const [ckBTCAddressAccountID, setCkBTCAddressAccountID] =
+    useState<string>("");
 
   const sendModeOptions: any[] = Object.values(ESendMode).map((a) => ({
     key: a,
@@ -209,9 +213,56 @@ const SendFundsForm = ({
       const convertToICPFormat = convertToE8s(Number(amounts?.[0]));
       const { data: multisigVaultTx } = await create_transactions(
         activeMultisig,
-        recipients?.[0],
+        selectedToken !== "ICP" ? ckBTCAddressAccountID : recipients?.[0],
         convertToICPFormat,
-        "ICP",
+        selectedToken === "ICP"
+          ? "ICP"
+          : selectedToken === "ckBTC"
+          ? "CKBTC"
+          : "CKETH",
+        selectedToken !== "ICP" ? recipients?.[0] : null,
+      );
+
+      if (multisigVaultTx) {
+        queueNotification({
+          header: "Success",
+          message: "New Transaction Created.",
+          status: NotificationStatus.SUCCESS,
+        });
+        setSuccess(true);
+      } else {
+        queueNotification({
+          header: "Error.",
+          message: "Please try again.",
+          status: NotificationStatus.ERROR,
+        });
+        setFailure(true);
+        setLoading(false);
+      }
+    } catch (err) {
+      console.log(err);
+      setNewTxn?.((prev) => !prev);
+      onCancel?.();
+      setFailure(true);
+      setLoading(false);
+      queueNotification({
+        header: "Error.",
+        message: "Please try again.",
+        status: NotificationStatus.ERROR,
+      });
+    }
+  };
+
+  const handleBTCTransaction = async () => {
+    setLoading(true);
+    try {
+      const recipients = recipientAndAmount.map((r) => r.recipient);
+      const amounts = recipientAndAmount.map((a) => a.amount);
+      const convertToICPFormat = convertToE8s(Number(amounts?.[0]));
+      const { data: multisigVaultTx } = await retrieve_btc_from_ckBtc(
+        activeMultisig,
+        recipients?.[0],
+        BigInt(convertToICPFormat),
       );
 
       if (multisigVaultTx) {
@@ -406,7 +457,7 @@ const SendFundsForm = ({
                   <Balance
                     address={activeMultisig}
                     onChange={setMultisigBalance}
-                    isCkbtc={selectedToken === "ckBTC"}
+                    selectedToken={selectedToken}
                   />
                 </article>
                 <article className="w-[412px] flex items-center">
@@ -535,7 +586,7 @@ const SendFundsForm = ({
                         )}
                         <div
                           className={`flex items-center gap-x-2 w-[${
-                            selectedToken === "ckBTC" ? "100%" : "45%"
+                            selectedToken !== "ICP" ? "100%" : "45%"
                           }]`}
                         >
                           <BalanceInput
@@ -559,23 +610,12 @@ const SendFundsForm = ({
                       when the transaction is included in a block.
                     </p>
                   </article>
-                  <article className="w-[412px] flex items-center">
-                    <span className="-mr-1.5 z-0">
-                      <LineIcon className="text-5xl" />
-                    </span>
-                    <p className="p-3 bg-bg-secondary rounded-xl font-normal text-sm text-text_secondary leading-[15.23px] -mb-5">
-                      If the recipient account is new, the balance needs to be
-                      more than the existential deposit. Likewise if the sending
-                      account balance drops below the same value, the account
-                      will be removed from the state.
-                    </p>
-                  </article>
                 </div>
               </div>
             </section>
 
             {selectedToken === "ckBTC" ? (
-              <section className="mt-[15px] w-[500px]">
+              <section className="mt-2 w-[500px]">
                 <label className="text-primary font-normal text-xs block mb-[5px]">
                   Send Mode*
                 </label>
@@ -617,6 +657,41 @@ const SendFundsForm = ({
                     className="w-full text-sm font-normal leading-[15px] border-0 outline-0 p-3 placeholder:text-[#505050] bg-bg-secondary rounded-lg text-white pr-24 resize-none"
                     value={ckBTCAddress}
                     onChange={(e) => setCkBTCAddress(e.target.value)}
+                  />
+
+                  {sendMode !== ESendMode.WITHDRAW && (
+                    <Input
+                      placeholder={"Enter AccountID"}
+                      className="w-full text-sm font-normal leading-[15px] border-0 outline-0 p-3 placeholder:text-[#505050] bg-bg-secondary rounded-lg text-white pr-24 resize-none mt-2"
+                      value={ckBTCAddressAccountID}
+                      onChange={(e) => setCkBTCAddressAccountID(e.target.value)}
+                    />
+                  )}
+                </Form.Item>
+              </section>
+            ) : null}
+
+            {selectedToken === "ckETH" ? (
+              <section className="mt-2 w-[500px]">
+                <label className="text-primary font-normal text-xs block mb-[5px] mt-[10px]">
+                  To*
+                </label>
+                <Form.Item
+                  name="ckBTC"
+                  rules={[{ message: "Required", required: true }]}
+                  className="border-0 outline-0 my-0 p-0"
+                >
+                  <Input
+                    placeholder={"Enter Principal ID"}
+                    className="w-full text-sm font-normal leading-[15px] border-0 outline-0 p-3 placeholder:text-[#505050] bg-bg-secondary rounded-lg text-white pr-24 resize-none mb-2"
+                    value={ckBTCAddress}
+                    onChange={(e) => setCkBTCAddress(e.target.value)}
+                  />
+                  <Input
+                    placeholder={"Enter AccountID"}
+                    className="w-full text-sm font-normal leading-[15px] border-0 outline-0 p-3 placeholder:text-[#505050] bg-bg-secondary rounded-lg text-white pr-24 resize-none"
+                    value={ckBTCAddressAccountID}
+                    onChange={(e) => setCkBTCAddressAccountID(e.target.value)}
                   />
                 </Form.Item>
               </section>
@@ -826,7 +901,11 @@ const SendFundsForm = ({
                 )
               }
               loading={loading}
-              onClick={handleSubmit}
+              onClick={
+                selectedToken === "ICP" && sendMode === ESendMode.WITHDRAW
+                  ? handleBTCTransaction
+                  : handleSubmit
+              }
               className="w-[250px]"
               title="Make Transaction"
             />

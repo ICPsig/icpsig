@@ -21,17 +21,17 @@
       }
     },
     "cketh_ledger": {
-			"type": "custom",
+      "type": "custom",
       "candid": "https://raw.githubusercontent.com/dfinity/ic/2e921c9adfc71f3edc96a9eb5d85fc742e7d8a9f/rs/rosetta-api/icrc1/ledger/ledger.did",
       "wasm": "https://download.dfinity.systems/ic/2e921c9adfc71f3edc96a9eb5d85fc742e7d8a9f/canisters/ic-icrc1-ledger.wasm.gz",
-			"remote": {
-				"id": {
-					"ic": "apia6-jaaaa-aaaar-qabma-cai"
-				}
-			}
-		},
+      "remote": {
+        "id": {
+          "ic": "apia6-jaaaa-aaaar-qabma-cai"
+        }
+      }
+    },
     "icp_vault": {
-      "dependencies": ["icp_ledger_canister", "icrc1_ledger_canister", "cketh_ledger"],
+      "dependencies": ["icp_ledger_canister", "icrc1_ledger_canister"],
       "main": "canisters/icp_vault/main.mo",
       "type": "motoko"
     },

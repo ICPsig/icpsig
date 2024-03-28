@@ -44,6 +44,17 @@ export const idlFactory = ({ IDL }) => {
     'name' : IDL.Text,
     'created_at' : IDL.Int,
   });
+  const SignRequest = IDL.Record({
+    'to' : IDL.Text,
+    'gas' : IDL.Nat,
+    'value' : IDL.Nat,
+    'vault' : IDL.Text,
+    'max_priority_fee_per_gas' : IDL.Nat,
+    'data' : IDL.Opt(IDL.Text),
+    'max_fee_per_gas' : IDL.Nat,
+    'chain_id' : IDL.Nat,
+    'nonce' : IDL.Nat,
+  });
   const Multisig = IDL.Service({
     'add_address_to_address_book' : IDL.Func(
         [IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Text],
@@ -65,6 +76,7 @@ export const idlFactory = ({ IDL }) => {
       ),
     'getCanisterPrincipal' : IDL.Func([], [IDL.Principal], []),
     'get_2FA_data' : IDL.Func([], [TowFAType], ['query']),
+    'get_ETH_address' : IDL.Func([IDL.Text], [IDL.Text], []),
     'get_address_book' : IDL.Func(
         [IDL.Text],
         [IDL.Vec(AddressBook)],
@@ -95,12 +107,25 @@ export const idlFactory = ({ IDL }) => {
         ],
         ['query'],
       ),
+    'get_btc_address' : IDL.Func([IDL.Text], [IDL.Text], []),
     'get_ckbtc_balance' : IDL.Func([IDL.Text, IDL.Principal], [IDL.Nat], []),
+    'get_eth_address_from_vault' : IDL.Func(
+        [IDL.Text],
+        [
+          IDL.Variant({
+            'Ok' : IDL.Record({ 'address' : IDL.Text }),
+            'Err' : IDL.Text,
+          }),
+        ],
+        [],
+      ),
+    'get_eth_balance' : IDL.Func([IDL.Text, IDL.Principal], [IDL.Nat], []),
     'get_multisig_balance' : IDL.Func(
         [IDL.Text],
         [IDL.Record({ 'icp' : IDL.Nat64, 'ckbtc' : IDL.Nat })],
         [],
       ),
+    'get_subaccount' : IDL.Func([IDL.Text], [IDL.Vec(IDL.Nat8)], ['query']),
     'get_transactions' : IDL.Func(
         [IDL.Text],
         [IDL.Vec(Transaction)],
@@ -112,11 +137,31 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Bool],
         [],
       ),
+    'retrive_btc_from_ckBtc' : IDL.Func(
+        [IDL.Text, IDL.Text, IDL.Nat64],
+        [IDL.Record({ 'block' : IDL.Nat64, 'isSuccess' : IDL.Bool })],
+        [],
+      ),
     'save_2FA_data' : IDL.Func(
         [IDL.Text, IDL.Text, IDL.Bool, IDL.Bool, IDL.Text],
         [TowFAType],
         [],
       ),
+    'sign' : IDL.Func(
+        [SignRequest, IDL.Text],
+        [
+          IDL.Variant({
+            'Ok' : IDL.Record({
+              'signed_hash' : IDL.Text,
+              'signature_hex' : IDL.Text,
+            }),
+            'Err' : IDL.Text,
+          }),
+        ],
+        [],
+      ),
+    'sign_eth_transaction' : IDL.Func([SignRequest], [IDL.Text], []),
+    'update_btc_to_ckBtc' : IDL.Func([IDL.Text], [IDL.Bool], []),
   });
   return Multisig;
 };

@@ -1,3 +1,4 @@
+import Cycles "mo:base/ExperimentalCycles";
 import Array "mo:base/Array";
 import RBTree "mo:base/RBTree";
 import Int "mo:base/Int";
@@ -26,6 +27,8 @@ import Adapter "./Adapter";
 import Account "./Account";
 import Blob "mo:base/Blob";
 import Bool "mo:base/Bool";
+import Hex "./Hex";
+import SHA256 "./SHA256";
 import AccountIdentifierBlob "mo:principal/blob/AccountIdentifier";
 
 shared ({ caller = installer_ }) actor class Multisig() = this {
@@ -83,8 +86,15 @@ shared ({ caller = installer_ }) actor class Multisig() = this {
   let icp_ledger_canister = "ryjl3-tyaaa-aaaaa-aaaba-cai";
 
   let ckBTC_minter_canister = "mqygn-kiaaa-aaaar-qaadq-cai";
+  let eth_minter_canister = "jzenf-aiaaa-aaaar-qaa7q-cai";
+  let eth_transaction_canister = "7mgms-raaaa-aaaak-afqeq-cai";
+  let KEY = "test_key_1";
 
   let CKBTC_MINTER: Types.CKBTC_Actor = actor (ckBTC_minter_canister);
+
+  let ETH_MINTER: Types.CKBTC_Actor = actor (ckBTC_minter_canister);
+
+  let ETH_TRANSACTION: Types.ETH_TRANSACTION_Actor = actor (eth_transaction_canister);
 
   /** Source of entropy for substantiating ULID multisig ids. */
   let idCreationEntropy_ = Source.Source(XorShift.toReader(XorShift.XorShift64(null)), 0);
@@ -405,6 +415,32 @@ shared ({ caller = installer_ }) actor class Multisig() = this {
     return ckBtcBalance;
   };
 
+  public query func get_subaccount(vault:Text): async [Nat8]{
+    let vault_obj = switch (Trie.get(vaults_map, textKey(vault), Text.equal)){
+      case null {
+          throw Error.reject("Vault does not exist: " # vault );
+      };
+      case (?v_obj){ v_obj}
+    };
+    let id = switch (Trie.get(vaults_ids_map, textKey(vault), Text.equal)) {
+        case null { "" };
+        case (?v_id) { v_id };
+      };
+    Blob.toArray(Account.principalToSubaccount(vault_obj.admin, id));
+  };
+
+  public shared func get_eth_balance(vault: Text, owner: Principal): async Nat {
+    let id = switch (Trie.get(vaults_ids_map, textKey(vault), Text.equal)) {
+        case null { "" };
+        case (?v_id) { v_id };
+      };
+    let subAccount =Blob.toArray(Account.principalToSubaccount(owner, id));
+    // let subAccount =Account.principalToSubaccount(owner, id);
+    let ckethBalance = await Cketh_Ledger_ICP.icrc1_balance_of({owner = await getCanisterPrincipal(); subaccount = ?subAccount});
+    
+    return ckethBalance;
+  };
+
   public type ReturnVault = {
     name: Text;
     signers : [Principal];
@@ -423,7 +459,9 @@ shared ({ caller = installer_ }) actor class Multisig() = this {
     };
     let balance = await Ledger_ICP.account_balance_dfx({account = vault});
     let ckbtc_balance = await get_ckbtc_balance(vault, vault_obj.admin);
-    return {icp = balance.e8s; ckbtc=ckbtc_balance};
+    let cketh_balance = await get_eth_balance(vault, vault_obj.admin);
+    
+    return {icp = balance.e8s; ckbtc=ckbtc_balance; cketh=cketh_balance};
   };
 
 
@@ -851,6 +889,207 @@ shared ({ caller = installer_ }) actor class Multisig() = this {
     // let destination_subaccount = await get_nat8_from_account_id(destination);
     let address = await CKBTC_MINTER.get_btc_address({owner = ?getInvoiceCanisterId_(); subaccount = ?subaccount});
     return address;
-  }
+  };
+
+  public shared ({caller}) func update_btc_to_ckBtc(vault:Text): async Bool{
+
+    let vault_obj = switch (Trie.get(vaults_map, textKey(vault), Text.equal)){
+      case null {
+          throw Error.reject("Vault does not exist: " # vault );
+      };
+      case (?v_obj){ v_obj}
+    };
+    
+    let signers = vault_obj.signers;
+    let signer = List.find(signers, func (a:Principal): Bool{ a == caller });
+    let owner = switch (signer){
+      case null {
+        throw Error.reject("Vault does not belong to caller");
+      };
+      case (?signer) { signer }
+    };
+
+    let id = switch (Trie.get(vaults_ids_map, textKey(vault), Text.equal)) {
+      case null { "" };
+      case (?v_id) { v_id };
+    };
+
+    let subaccount = Account.principalToSubaccount(vault_obj.admin, id);
+
+    // let canister_subaccount = Blob.toArray(Account.principalToSubaccount(owner, id));
+    // let destination_subaccount = await get_nat8_from_account_id(destination);
+    let result = await CKBTC_MINTER.update_balance({owner = ?getInvoiceCanisterId_(); subaccount = ?subaccount});
+    return switch(result){
+      case(#Ok(result)){
+        return true;
+      };
+      case(#Err(result)){
+        return false;
+      }
+    };
+    return false;
+  };
+
+  public shared ({caller}) func retrive_btc_from_ckBtc(vault:Text, btcAddress:Text, amount: Nat64): async {isSuccess: Bool; block:Nat64}{
+
+    let vault_obj = switch (Trie.get(vaults_map, textKey(vault), Text.equal)){
+      case null {
+          throw Error.reject("Vault does not exist: " # vault );
+      };
+      case (?v_obj){ v_obj}
+    };
+    
+    let signers = vault_obj.signers;
+    
+    let signer = List.find(signers, func (a:Principal): Bool{ a == caller });
+    let owner = switch (signer){
+      case null {
+        throw Error.reject("Vault does not belong to caller");
+      };
+      case (?signer) { signer }
+    };
+
+    let id = switch (Trie.get(vaults_ids_map, textKey(vault), Text.equal)) {
+      case null { "" };
+      case (?v_id) { v_id };
+    };
+
+    let subaccount = Account.principalToSubaccount(vault_obj.admin, id);
+
+    // let canister_subaccount = Blob.toArray(Account.principalToSubaccount(owner, id));
+    // let destination_subaccount = await get_nat8_from_account_id(destination);
+    let result = await CKBTC_MINTER.retrieve_btc_with_approval({address = btcAddress; amount; from_subaccount= ?subaccount});
+    return switch(result){
+      case(#Ok(result)){
+        return {isSuccess = true ; block = result.block_index};
+      };
+      case(#Err(result)){
+        return {isSuccess = false ; block = 0};
+      }
+    };
+  };
+
+  public shared func get_ETH_address(vault:Text): async Text{
+    let address = await ETH_TRANSACTION.eth_address_of(vault);
+    return address;
+  };
+
+  public type SignRequest = {
+    to:Text;
+    gas: Nat;
+    value: Nat;
+    max_priority_fee_per_gas:Nat;
+    data:?Text;
+    max_fee_per_gas:Nat;
+    chain_id: Nat;
+    nonce: Nat;
+    vault: Text
+  };
+
+
+  public shared func sign_eth_transaction(transaction: SignRequest):async Text{
+    let hash = await ETH_TRANSACTION.sign_transaction(transaction);
+    hash;
+  };
+
+  type IC = actor {
+    ecdsa_public_key : ({
+      canister_id : ?Principal;
+      derivation_path : [Blob];
+      key_id : { curve: { #secp256k1; } ; name: Text };
+    }) -> async ({ public_key : Blob; chain_code : Blob; });
+    sign_with_ecdsa : ({
+      message_hash : Blob;
+      derivation_path : [Blob];
+      key_id : { curve: { #secp256k1; } ; name: Text };
+    }) -> async ({ signature : Blob });
+  };
+
+  let ic : IC = actor("aaaaa-aa");
+
+
+  public shared (msg) func get_eth_address_from_vault(vault: Text) : async { #Ok : { address: Text }; #Err : Text } {
+    let caller = Principal.toBlob(msg.caller);
+     let vault_obj = switch (Trie.get(vaults_map, textKey(vault), Text.equal)){
+      case null {
+          throw Error.reject("Vault does not exist: " # vault );
+      };
+      case (?v_obj){ v_obj}
+    };
+
+    let signers = vault_obj.signers;
+    
+    let signer = List.find(signers, func (a:Principal): Bool{ a == msg.caller });
+    let owner = switch (signer){
+      case null {
+        throw Error.reject("Vault does not belong to caller");
+      };
+      case (?signer) { signer }
+    };
+
+    let id = switch (Trie.get(vaults_ids_map, textKey(vault), Text.equal)) {
+        case null { "" };
+        case (?v_id) { v_id };
+      };
+    try {
+
+      // Make a call to the management canister to request an ECDSA public key:
+      let { public_key } = await ic.ecdsa_public_key({
+          canister_id = null;
+          derivation_path = [ Account.principalToSubaccount(vault_obj.admin, id)  ];
+          key_id = { curve = #secp256k1; name = KEY };
+      });
+
+      let address = await ETH_TRANSACTION.eth_address_of_public_key(public_key);
+      
+      #Ok({ address })
+    
+    } catch (err) {
+      #Err(Error.message(err))
+    }
+  };
+
+  
+
+  public shared (msg) func sign(transaction: SignRequest, vault:Text) : async { #Ok : { signature_hex: Text; signed_hash: Text };  #Err : Text }  {
+    let caller = Principal.toBlob(msg.caller);
+    let vault_obj = switch (Trie.get(vaults_map, textKey(vault), Text.equal)){
+      case null {
+        throw Error.reject("Vault does not exist: " # vault );
+      };
+      case (?v_obj){ v_obj}
+    };
+    let signers = vault_obj.signers;
+    
+    let signer = List.find(signers, func (a:Principal): Bool{ a == msg.caller });
+    let owner = switch (signer){
+      case null {
+        throw Error.reject("Vault does not belong to caller");
+      };
+      case (?signer) { signer }
+    };
+    let id = switch (Trie.get(vaults_ids_map, textKey(vault), Text.equal)) {
+      case null { "" };
+      case (?v_id) { v_id };
+    };
+    try {
+      let transaction_hash: Blob = await ETH_TRANSACTION.generate_transaction_hash(transaction);
+      let { public_key } = await ic.ecdsa_public_key({
+          canister_id = null;
+          derivation_path = [ Account.principalToSubaccount(vault_obj.admin, id)  ];
+          key_id = { curve = #secp256k1; name = KEY };
+      });
+      Cycles.add(10_000_000_000);
+      let { signature } = await ic.sign_with_ecdsa({
+          message_hash = transaction_hash;
+          derivation_path = [ Account.principalToSubaccount(vault_obj.admin, id) ];
+          key_id = { curve = #secp256k1; name = KEY };
+      });
+      let signed_hash = await ETH_TRANSACTION.generate_signed_hash(transaction_hash,public_key,signature,transaction);
+      #Ok({ signature_hex = Hex.encode(Blob.toArray(signature)); signed_hash})
+    } catch (err) {
+      #Err(Error.message(err))
+    }
+  };
 
 }

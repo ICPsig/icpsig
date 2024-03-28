@@ -7,45 +7,45 @@ import React, { useEffect, useState } from "react";
 import Loader from "./Loader";
 import useIcpVault from "@frontend/hooks/useIcpVault";
 import convertE8sToNumber from "@frontend/utils/convertE8sToNumber";
+import { useGlobalUserDetailsContext } from "@frontend/context/UserDetailsContext";
+import { ReloadOutlined } from "@ant-design/icons";
 
 interface Props {
   className?: string;
   address: string;
   onChange?: (balance: string) => void;
-  isCkbtc?: boolean;
+  selectedToken?: "ICP" | "ckBTC" | "ckETH";
 }
 
-const Balance = ({ address, className, onChange, isCkbtc }: Props) => {
-  const [balance, setBalance] = useState<string>("0");
-  const [loading, setLoading] = useState<boolean>(false);
-  const { get_multisig_balance } = useIcpVault();
+const Balance = ({ address, className, onChange, selectedToken }: Props) => {
+  const {
+    activeMultisig,
+    multisigAddresses,
+    balanceLoading,
+    handleMultisigBalance,
+  } = useGlobalUserDetailsContext();
 
-  const fetchEthBalance = async (address: string) => {
-    try {
-      setLoading(true);
-      const { data, error } = await get_multisig_balance(address);
-      if (data && !error) {
-        setBalance(convertE8sToNumber(isCkbtc ? data.ckbtc : data?.icp?.e8s));
-        onChange(convertE8sToNumber(isCkbtc ? data.ckbtc : data?.icp?.e8s));
-      }
-      setLoading(false);
-      // if (balance) setBalance(balance);
-    } catch (err) {
-      console.log("Err from fetchEthBalance", err);
-    }
-  };
-
-  useEffect(() => {
-    if (address) fetchEthBalance(address);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [address]);
+  const currentMultisig = multisigAddresses?.find(
+    (item) => item.address === activeMultisig,
+  );
 
   return (
     <div
-      className={`bg-highlight rounded-lg px-[10px] py-[6px] ml-auto font-normal text-xs leading-[13px] flex items-center justify-center ${className}`}
+      className={`bg-highlight rounded-lg px-[10px] py-[6px] ml-auto font-normal text-xs leading-[13px] flex items-center justify-center ${className} flex justify-between gap-1`}
     >
       <span className="text-primary mr-2">Balance: </span>
-      {loading ? <Loader /> : <span className="text-white">{balance}</span>}
+      {balanceLoading ? (
+        <Loader />
+      ) : (
+        <span className="text-white">
+          {currentMultisig.balance?.[selectedToken] || 0.0}
+        </span>
+      )}
+      {!balanceLoading && (
+        <span onClick={handleMultisigBalance}>
+          <ReloadOutlined className="text-primary" />
+        </span>
+      )}
     </div>
   );
 };

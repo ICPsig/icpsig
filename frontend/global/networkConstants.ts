@@ -86,4 +86,16 @@ export const tokens: TokenProperties[] = [
     priceChange: 2.5666343196806336,
     error: false,
   },
+  {
+    symbol: "ckETH",
+    canisterId: "apia6-jaaaa-aaaar-qabma-cai",
+    name: "ckETH",
+    decimals: 8,
+    standard: "ICRC1",
+    fee: 10,
+    amount: 0,
+    logo: ckBTCLogo,
+    priceChange: 2.5666343196806336,
+    error: false,
+  },
 ];

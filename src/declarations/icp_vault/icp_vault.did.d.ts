@@ -29,6 +29,7 @@ export interface Multisig {
   >,
   'getCanisterPrincipal' : ActorMethod<[], Principal>,
   'get_2FA_data' : ActorMethod<[], TowFAType>,
+  'get_ETH_address' : ActorMethod<[string], string>,
   'get_address_book' : ActorMethod<[string], Array<AddressBook>>,
   'get_all_vault' : ActorMethod<[string], Array<Vault>>,
   'get_all_vault_balace' : ActorMethod<
@@ -41,18 +42,37 @@ export interface Multisig {
     [],
     Array<{ 'multisig' : [] | [ReturnVault], 'address' : string }>
   >,
+  'get_btc_address' : ActorMethod<[string], string>,
   'get_ckbtc_balance' : ActorMethod<[string, Principal], bigint>,
+  'get_eth_address_from_vault' : ActorMethod<
+    [string],
+    { 'Ok' : { 'address' : string } } |
+      { 'Err' : string }
+  >,
+  'get_eth_balance' : ActorMethod<[string, Principal], bigint>,
   'get_multisig_balance' : ActorMethod<
     [string],
     { 'icp' : bigint, 'ckbtc' : bigint }
   >,
+  'get_subaccount' : ActorMethod<[string], Uint8Array | number[]>,
   'get_transactions' : ActorMethod<[string], Array<Transaction>>,
   'greet' : ActorMethod<[], string>,
   'remove_signatory' : ActorMethod<[string, Principal, bigint], boolean>,
+  'retrive_btc_from_ckBtc' : ActorMethod<
+    [string, string, bigint],
+    { 'block' : bigint, 'isSuccess' : boolean }
+  >,
   'save_2FA_data' : ActorMethod<
     [string, string, boolean, boolean, string],
     TowFAType
   >,
+  'sign' : ActorMethod<
+    [SignRequest, string],
+    { 'Ok' : { 'signed_hash' : string, 'signature_hex' : string } } |
+      { 'Err' : string }
+  >,
+  'sign_eth_transaction' : ActorMethod<[SignRequest], string>,
+  'update_btc_to_ckBtc' : ActorMethod<[string], boolean>,
 }
 export interface ReturnVault {
   'admin' : Principal,
@@ -60,6 +80,17 @@ export interface ReturnVault {
   'signers' : Array<Principal>,
   'name' : string,
   'created_at' : bigint,
+}
+export interface SignRequest {
+  'to' : string,
+  'gas' : bigint,
+  'value' : bigint,
+  'vault' : string,
+  'max_priority_fee_per_gas' : bigint,
+  'data' : [] | [string],
+  'max_fee_per_gas' : bigint,
+  'chain_id' : bigint,
+  'nonce' : bigint,
 }
 export type Signers = [] | [[Principal, List]];
 export interface TowFAType {

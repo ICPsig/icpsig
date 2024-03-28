@@ -120,6 +120,7 @@ export interface UserDetailsContextType {
   two_factor_auth?: I2FASettings;
   tfa_token?: I2FASettings;
   balanceLoading: boolean;
+  handleMultisigBalance?: () => void;
 }
 
 export enum Wallet {

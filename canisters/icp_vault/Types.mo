@@ -12,6 +12,46 @@ module Types {
     icrc1_fee : shared query () -> async Nat;
   };
 
+  public type UtxoStatus = {
+    #ValueTooSmall : Utxo;
+    #Tainted : Utxo;
+    #Minted : { minted_amount : Nat64; block_index : Nat64; utxo : Utxo };
+    #Checked : Utxo;
+  };
+
+  public type UpdateBalanceError = {
+    #GenericError : { error_message : Text; error_code : Nat64 };
+    #TemporarilyUnavailable : Text;
+    #AlreadyProcessing;
+    #NoNewUtxos : {
+      required_confirmations : Nat32;
+      pending_utxos : ?[PendingUtxo];
+      current_confirmations : ?Nat32;
+    };
+  };
+
+  public type PendingUtxo = {
+    confirmations : Nat32;
+    value : Nat64;
+    outpoint : { txid : Blob; vout : Nat32 };
+  };
+
+   public type RetrieveBtcWithApprovalArgs = {
+    from_subaccount : ?Blob;
+    address : Text;
+    amount : Nat64;
+  };
+
+   public type RetrieveBtcWithApprovalError = {
+    #MalformedAddress : Text;
+    #GenericError : { error_message : Text; error_code : Nat64 };
+    #TemporarilyUnavailable : Text;
+    #InsufficientAllowance : { allowance : Nat64 };
+    #AlreadyProcessing;
+    #AmountTooLow : Nat64;
+    #InsufficientFunds : { balance : Nat64 };
+  };
+
    public type CKBTC_Actor = actor {
     get_btc_address : shared {
         owner : ?Principal;
@@ -19,10 +59,34 @@ module Types {
       } -> async Text;
     get_deposit_fee : shared query () -> async Nat64;
     get_withdrawal_account : shared () -> async Account;
-    retrieve_btc : shared RetrieveBtcArgs -> async {
-        #Ok : RetrieveBtcOk;
-        #Err : RetrieveBtcError;
+    retrieve_btc_with_approval : shared RetrieveBtcWithApprovalArgs -> async {
+        #Ok : { block_index : Nat64 };
+        #Err : RetrieveBtcWithApprovalError;
       };
+    update_balance : shared {
+        owner : ?Principal;
+        subaccount : ?Blob;
+      } -> async { #Ok : [UtxoStatus]; #Err : UpdateBalanceError };
+  };
+
+  public type SignRequest = {
+    to:Text;
+    gas: Nat;
+    value: Nat;
+    max_priority_fee_per_gas:Nat;
+    data:?Text;
+    max_fee_per_gas:Nat;
+    chain_id: Nat;
+    nonce: Nat;
+    vault: Text;
+  };
+
+   public type ETH_TRANSACTION_Actor = actor {
+    eth_address_of : shared (Text) -> async Text;
+    sign_transaction :shared (SignRequest) -> async  (Text);
+    eth_address_of_public_key: shared (Blob) -> async (Text);
+    generate_transaction_hash:shared (SignRequest) -> async  (Blob);
+    generate_signed_hash:shared (Blob, Blob, Blob, SignRequest) -> async (Text)
   };
 
   public type RetrieveBtcArgs = { address : Text; amount : Nat64 };
@@ -35,8 +99,6 @@ module Types {
     #AmountTooLow : Nat64;
     #InsufficientFunds : { balance : Nat64 };
   };
-
-  public type RetrieveBtcOk = { block_index : Nat64 };
 
 
   public type TransferFee = { transfer_fee : Tokens };

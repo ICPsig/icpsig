@@ -26,7 +26,7 @@ import Avatar from "../Avatar/Avatar";
 import useIcpVault from "@frontend/hooks/useIcpVault";
 import convertE8sToNumber from "@frontend/utils/convertE8sToNumber";
 import Loader from "@frontend/ui-components/Loader";
-import { encodePrincipalToEthAddress } from '@dfinity/cketh';
+import { encodePrincipalToEthAddress } from "@dfinity/cketh";
 import { useGlobalIdentityContext } from "@frontend/context/IdentityProviderContext";
 
 interface IDashboardCard {
@@ -46,44 +46,25 @@ const DashboardCard = ({
   openTransactionModal,
   setOpenTransactionModal,
 }: IDashboardCard) => {
-  const { activeMultisig, multisigAddresses } = useGlobalUserDetailsContext();
-  const {principal} = useGlobalIdentityContext()
+  const { activeMultisig, multisigAddresses, balanceLoading } =
+    useGlobalUserDetailsContext();
+  const { principal } = useGlobalIdentityContext();
   const [openFundMultisigModal, setOpenFundMultisigModal] = useState(false);
   const { get_multisig_balance } = useIcpVault();
   const [loading, setLoading] = useState(true);
-  const [balance, setBalance] = useState<{ icp: string; ckbtc: string }>({
-    icp: "0",
-    ckbtc: "0",
-  });
 
   const currentMultisig = multisigAddresses?.find(
     (item) => item.address === activeMultisig,
   );
 
-  const fetchEthBalance = async (address: string) => {
-    try {
-      setLoading(true);
-      const { data, error } = await get_multisig_balance(activeMultisig);
-      if (data && !error) {
-        setBalance({
-          icp: convertE8sToNumber(data.icp || 0),
-          ckbtc: convertE8sToNumber(data.ckbtc || 0),
-        });
-      }
-      setLoading(false);
-    } catch (err) {
-      console.log("Err from fetchEthBalance", err);
-    }
+  const generateEthAddress = () => {
+    console.log(encodePrincipalToEthAddress(principal));
   };
 
-  const generateEthAddress = ()=>{
-    console.log(encodePrincipalToEthAddress(principal))
-  }
-
-  useEffect(() => {
-    if (activeMultisig) fetchEthBalance(activeMultisig);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeMultisig]);
+  // useEffect(() => {
+  //   if (activeMultisig) fetchEthBalance(activeMultisig);
+  //   // eslint-disable-next-line react-hooks/exhaustive-deps
+  // }, [activeMultisig]);
 
   const TransactionModal: FC = () => {
     return (
@@ -225,20 +206,36 @@ const DashboardCard = ({
           <div>
             <div className="text-white">ICP</div>
             <div className="font-bold text-lg text-primary">
-              {loading ? (
+              {balanceLoading ? (
                 <Loader />
               ) : (
-                <span className="text-white">{balance.icp}</span>
+                <span className="text-white">
+                  {currentMultisig?.balance?.ICP || 0.0}
+                </span>
               )}
             </div>
           </div>
           <div>
             <div className="text-white">CKBTC</div>
             <div className="font-bold text-lg text-primary">
-              {loading ? (
+              {balanceLoading ? (
                 <Loader />
               ) : (
-                <span className="text-white">{balance.ckbtc}</span>
+                <span className="text-white">
+                  {currentMultisig?.balance?.ckBTC || 0.0}
+                </span>
+              )}
+            </div>
+          </div>
+          <div>
+            <div className="text-white">CKETH</div>
+            <div className="font-bold text-lg text-primary">
+              {balanceLoading ? (
+                <Loader />
+              ) : (
+                <span className="text-white">
+                  {currentMultisig?.balance?.ckETH || 0.0}
+                </span>
               )}
             </div>
           </div>

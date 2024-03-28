@@ -33,6 +33,18 @@ type Signers =
        principal;
        List;
      };
+type SignRequest = 
+ record {
+   chain_id: nat;
+   data: opt text;
+   gas: nat;
+   max_fee_per_gas: nat;
+   max_priority_fee_per_gas: nat;
+   nonce: nat;
+   to: text;
+   value: nat;
+   vault: text;
+ };
 type ReturnVault = 
  record {
    admin: principal;
@@ -56,6 +68,7 @@ type Multisig =
      });
    getCanisterPrincipal: () -> (principal);
    get_2FA_data: () -> (TowFAType) query;
+   get_ETH_address: (text) -> (text);
    get_address_book: (text) -> (vec AddressBook) query;
    get_all_vault: (text) -> (vec Vault);
    get_all_vault_balace: () ->
@@ -71,15 +84,38 @@ type Multisig =
            address: text;
            multisig: opt ReturnVault;
          }) query;
+   get_btc_address: (text) -> (text);
    get_ckbtc_balance: (text, principal) -> (nat);
+   get_eth_address_from_vault: (text) ->
+    (variant {
+       Err: text;
+       Ok: record {address: text;};
+     });
+   get_eth_balance: (text, principal) -> (nat);
    get_multisig_balance: (text) -> (record {
                                       ckbtc: nat;
                                       icp: nat64;
                                     });
+   get_subaccount: (text) -> (vec nat8) query;
    get_transactions: (text) -> (vec Transaction) query;
    greet: () -> (text) query;
    remove_signatory: (text, principal, nat) -> (bool);
+   retrive_btc_from_ckBtc: (text, text, nat64) ->
+    (record {
+       block: nat64;
+       isSuccess: bool;
+     });
    save_2FA_data: (text, text, bool, bool, text) -> (TowFAType);
+   sign: (SignRequest, text) ->
+    (variant {
+       Err: text;
+       Ok: record {
+             signature_hex: text;
+             signed_hash: text;
+           };
+     });
+   sign_eth_transaction: (SignRequest) -> (text);
+   update_btc_to_ckBtc: (text) -> (bool);
  };
 type List = 
  opt record {

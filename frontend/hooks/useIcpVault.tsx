@@ -21,6 +21,12 @@ export default function useIcpVault() {
       save_2FA_data: null,
       get_2FA_data: null,
       greet: null,
+      get_btc_address: null,
+      get_eth_address: null,
+      sign_eth_transaction: null,
+      get_subAccount: null,
+      update_btc_to_ckBtc: null,
+      retrieve_btc_from_ckBtc: null,
     };
   }
 
@@ -242,6 +248,91 @@ export default function useIcpVault() {
     }
   };
 
+  const get_btc_address = async (vault: string) => {
+    try {
+      const data = await icpVaultBackend.get_btc_address(vault);
+      return { data, error: null };
+    } catch (error) {
+      console.log("error from create_transactions", error);
+      return { data: null, error };
+    }
+  };
+  const get_eth_address = async (vault: string) => {
+    try {
+      const data: any = await icpVaultBackend.get_eth_address_from_vault(vault);
+      return { data: data?.Ok?.address, error: null };
+    } catch (error) {
+      console.log("error from create_transactions", error);
+      return { data: null, error };
+    }
+  };
+
+  const update_btc_to_ckBtc = async (vault: string) => {
+    try {
+      const data: any = await icpVaultBackend.update_btc_to_ckBtc(vault);
+      return { data: data, error: null };
+    } catch (error) {
+      console.log("error from create_transactions", error);
+      return { data: null, error };
+    }
+  };
+
+  const retrieve_btc_from_ckBtc = async (
+    vault: string,
+    address: string,
+    amount: bigint,
+  ) => {
+    try {
+      const data: any = await icpVaultBackend.retrive_btc_from_ckBtc(
+        vault,
+        address,
+        amount,
+      );
+      return { data, error: null };
+    } catch (error) {
+      console.log("error from create_transactions", error);
+      return { data: null, error };
+    }
+  };
+
+  const get_subAccount = async (vault: string) => {
+    try {
+      const data: any = await icpVaultBackend.get_subaccount(vault);
+      console.log(data);
+      return { data, error: null };
+    } catch (error) {
+      console.log("error from create_transactions", error);
+      return { data: null, error };
+    }
+  };
+
+  const sign_eth_transaction = async (transaction: {
+    to: string;
+    gas: bigint;
+    value: bigint;
+    max_priority_fee_per_gas: bigint;
+    data: [string];
+    max_fee_per_gas: bigint;
+    chain_id: bigint;
+    nonce: bigint;
+    vault: string;
+  }) => {
+    try {
+      console.log("enter", transaction);
+      const data = await icpVaultBackend.sign(
+        { ...transaction, data: transaction.data || [""] },
+        transaction.vault,
+      );
+
+      console.log(data);
+
+      return { data, error: null };
+    } catch (error) {
+      console.log("error from create_transactions", error);
+      return { data: null, error };
+    }
+  };
+
   return {
     add_address_to_address_book,
     get_address_book,
@@ -257,6 +348,12 @@ export default function useIcpVault() {
     create_transactions,
     save_2FA_data,
     get_2FA_data,
+    get_btc_address,
+    get_eth_address,
     greet,
+    sign_eth_transaction,
+    get_subAccount,
+    update_btc_to_ckBtc,
+    retrieve_btc_from_ckBtc,
   };
 }
