@@ -1,82 +1,67 @@
 // Copyright 2022-2023 @Polkasafe/polkaSafe-ui authors & contributors
 // This software may be modified and distributed under the terms
 // of the Apache-2.0 license. See the LICENSE file for details.
-import { Button, Modal } from "antd"
-import React, { useState } from "react"
-import { useGlobalUserDetailsContext } from "@frontend/context/UserDetailsContext"
-import { NotificationStatus } from "@frontend/types"
+import { Button, Modal } from "antd";
+import React, { useState } from "react";
+import { useGlobalUserDetailsContext } from "@frontend/context/UserDetailsContext";
+import { NotificationStatus } from "@frontend/types";
 import {
   OutlineCloseIcon,
   PasswordOutlinedIcon,
-} from "@frontend/ui-components/CustomIcons"
-import queueNotification from "@frontend/ui-components/QueueNotification"
+} from "@frontend/ui-components/CustomIcons";
+import queueNotification from "@frontend/ui-components/QueueNotification";
 
-import CancelBtn from "../CancelBtn"
-import RemoveBtn from "../RemoveBtn"
+import CancelBtn from "../CancelBtn";
+import RemoveBtn from "../RemoveBtn";
+import axios from "axios";
+import { icpsig_backend } from "@frontend/services/icp_backend";
+import useIcpVault from "@frontend/hooks/useIcpVault";
 
 const Disable2FA = ({ className }: { className?: string }) => {
-  const [loading, setLoading] = useState<boolean>(false)
+  const [loading, setLoading] = useState<boolean>(false);
+  const { save_2FA_data } = useIcpVault();
 
-  const { two_factor_auth, address, setUserDetailsContextState } =
-    useGlobalUserDetailsContext()
-  const [showModal, setShowModal] = useState<boolean>(false)
+  const { setUserDetailsContextState } = useGlobalUserDetailsContext();
+  const [showModal, setShowModal] = useState<boolean>(false);
 
   const handleDisable2FA = async () => {
-    // don't submit if loading or if user is already 2FA enabled
-    if (loading || !address || !two_factor_auth?.enabled) return
-
-    setLoading(true)
+    setLoading(true);
     try {
-      // send as string just in case it starts with 0
-      const disable2FARes = await (
-        await fetch("api/v1/substrate/auth/2fa/disable2FA")
-      ).json()
-
-      const { data: disable2FAData, error: disable2FAError } =
-        disable2FARes as {
-          data: string
-          error: string
-        }
-
-      if (disable2FAError || !disable2FAData) {
-        setLoading(false)
+      const { data, error } = await save_2FA_data("", "", false, false);
+      if (error) {
+        setLoading(false);
         queueNotification({
           header: "Failed",
-          message: disable2FAError,
+          message: error,
           status: NotificationStatus.ERROR,
-        })
-        return
+        });
+        return;
       }
+      setTimeout(() => {
+        setUserDetailsContextState((prevState) => {
+          return {
+            ...prevState,
+            two_factor_auth: data,
+          };
+        });
+        queueNotification({
+          header: "Success",
+          message: "Two factor authentication disabled!",
+          status: NotificationStatus.SUCCESS,
+        });
+        setLoading(false);
+      }, 2000);
 
-      setUserDetailsContextState((prevState) => {
-        return {
-          ...prevState,
-          two_factor_auth: {
-            ...prevState.two_factor_auth,
-            base32_secret: "",
-            enabled: false,
-            url: "",
-            verified: false,
-          },
-        }
-      })
-
-      queueNotification({
-        header: "Success",
-        message: "Two factor authentication disabled!",
-        status: NotificationStatus.SUCCESS,
-      })
-
-      setShowModal(false)
+      setShowModal(false);
     } catch (error) {
-      setLoading(false)
+      setLoading(false);
       queueNotification({
         header: "Failed",
         message: error,
         status: NotificationStatus.ERROR,
-      })
+      });
     }
-  }
+  };
   return (
     <>
       <Modal
@@ -139,7 +124,7 @@ const Disable2FA = ({ className }: { className?: string }) => {
         </div>
       </div>
     </>
-  )
-}
+  );
+};
 
-export default Disable2FA
+export default Disable2FA;

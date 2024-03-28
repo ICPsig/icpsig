@@ -1,9 +1,8 @@
 // Copyright 2022-2023 @Polkasafe/polkaSafe-ui authors & contributors
 // This software may be modified and distributed under the terms
 // of the Apache-2.0 license. See the LICENSE file for details.
-import { Identity } from "@dfinity/agent";
-import { AuthClient } from "@dfinity/auth-client";
-import { AccountIdentifier } from "@dfinity/nns";
+import { HttpAgent, Identity } from "@dfinity/agent";
+import { LocalStorage, AuthClient } from "@dfinity/auth-client";
 import React, { useContext, useEffect, useState } from "react";
 
 export const OLD_MAINNET_IDENTITY_SERVICE_URL = "https://identity.ic0.app";
@@ -17,13 +16,19 @@ const getIdentityProvider = () => {
   return OLD_MAINNET_IDENTITY_SERVICE_URL;
 };
 
+export type StoredKey = string | CryptoKeyPair;
+
 export interface IdentityContextType {
   login: any;
+  logout: any;
   principal: any;
   account: any;
   setAccounts: any;
   setPrincipal: any;
-  identity: any;
+  setAuthClient: any;
+  agent: HttpAgent;
+  setAgent: any;
+  authClient: AuthClient | null;
 }
 
 export const IdentityContext: React.Context<IdentityContextType> =
@@ -33,55 +38,78 @@ export interface IdentityContextProviderProps {
   children?: React.ReactElement;
 }
 
+const noStorageImpl = {
+  get(key: string) {
+    return Promise.resolve(null);
+  },
+  set(key: string, value: StoredKey) {
+    return Promise.resolve();
+  },
+  remove(key: string) {
+    return Promise.resolve();
+  },
+};
+
 export function IdentityContextProvider({
   children,
 }: IdentityContextProviderProps): React.ReactElement {
   const [principal, setPrincipal] = useState<string>("");
   const [account, setAccounts] = useState<string>("");
-  const [authClient, setAuthClient] = useState<any>(null);
-  const [identity, setIdentity] = useState<Identity>(null);
+  const [authClient, setAuthClient] = useState<AuthClient>(null);
+  const [agent, setAgent] = useState<HttpAgent>();
 
   const handleConnect = async () => {
-    authClient.login({
-      // 7 days in nanoseconds
+    await authClient.login({
       identityProvider: getIdentityProvider(),
       maxTimeToLive: BigInt(7 * 24 * 60 * 60 * 1000 * 1000 * 1000),
-      onSuccess: async () => {
-        const identity = (await authClient.getIdentity()) as Identity;
-        setIdentity(identity);
-        const principal = identity.getPrincipal().toText();
-        const account = identity.getPrincipal().toHex();
-        setPrincipal(principal);
-        setAccounts(account);
-        localStorage.setItem("principal", principal);
-        localStorage.setItem("address", account);
+      onSuccess: () => {
+        const identity = authClient.getIdentity();
+        const agent = new HttpAgent({ identity: identity });
+        setAgent(agent);
       },
     });
   };
 
-  useEffect(() => {
-    if (authClient) {
+  const handleDisconnect = async () => {
+    if (!authClient) {
       return;
     }
-    AuthClient.create().then((res: any) => {
-      setAuthClient(res);
-      res.isAuthenticated().then((isAuthenticated: boolean) => {
-        if (isAuthenticated) {
-          setIdentity(res.getIdentity());
-        }
-      });
+    await authClient.logout();
+    setPrincipal("");
+    setAccounts("");
+    setAgent(null);
+  };
+
+  useEffect(() => {
+    const storage = new LocalStorage();
+    AuthClient.create({ storage }).then(async (client) => {
+      setAuthClient(client);
+      const isAuthenticated = await client.isAuthenticated();
+      if (isAuthenticated) {
+        const identity = client.getIdentity();
+        const agent = new HttpAgent({ identity: identity });
+        setAgent(agent);
+        const principal = identity.getPrincipal().toText();
+        const account = identity.getPrincipal().toHex();
+        setPrincipal(principal);
+        setAccounts(account);
+      }
     });
   }, []);
 
   return (
     <IdentityContext.Provider
       value={{
+        authClient,
         login: handleConnect,
+        logout: handleDisconnect,
         principal,
         account,
-        identity,
         setAccounts,
         setPrincipal,
+        setAuthClient,
+        agent,
+        setAgent,
       }}
     >
       {children}

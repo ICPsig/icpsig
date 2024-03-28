@@ -12,6 +12,8 @@ import updateDB, { UpdateDB } from "@frontend/utils/updateDB";
 
 import NoTransactionsQueued from "./NoTransactionsQueued";
 import Transaction from "./Transaction";
+import useIcpVault from "@frontend/hooks/useIcpVault";
+import convertE8sToNumber from "@frontend/utils/convertE8sToNumber";
 
 // const LocalizedFormat = require("dayjs/plugin/localizedFormat")
 // dayjs.extend(LocalizedFormat)
@@ -23,69 +25,29 @@ interface IQueued {
   setRefetch: React.Dispatch<React.SetStateAction<boolean>>;
 }
 const Queued: FC<IQueued> = ({ loading, setLoading, refetch, setRefetch }) => {
-  const {
-    address,
-    activeMultisig,
-    setActiveMultisigData,
-    activeMultisigData,
-    identityBackend,
-  } = useGlobalUserDetailsContext();
+  const { address, activeMultisig, multisigAddresses } =
+    useGlobalUserDetailsContext();
   const [queuedTransactions, setQueuedTransactions] = useState<any[]>([]);
   const location = useLocation();
-
-  const handleAfterApprove = (callHash: string) => {
-    const payload = queuedTransactions.map((queue) => {
-      return queue.txHash === callHash
-        ? { ...queue, signatures: [...(queue.signatures || []), { address }] }
-        : queue;
-    });
+  const { get_transactions } = useIcpVault();
+  const currentMultisig = multisigAddresses?.find(
+    (item) => item.address === activeMultisig,
+  );
+  const handleAfterApprove = (id: string) => {
+    const payload = queuedTransactions
+      .map((queue) => {
+        return queue.id === id
+          ? { ...queue, approvals: [...(queue.approvals || []), { address }] }
+          : queue;
+      })
+      .filter((a) => {
+        return !(a.id === id && a.approvals.length === a.threshold);
+      });
     setQueuedTransactions(payload);
   };
 
   const handleAfterExecute = (callHash?: string) => {
     console.log(callHash);
-    //   let transaction: any = null;
-    //   const payload = queuedTransactions.filter((queue) => {
-    //     if (queue.txHash === callHash) {
-    //       transaction = queue;
-    //     }
-    //     return queue.txHash !== callHash;
-    //   });
-    //   if (transaction) {
-    //     if (transaction.type === "addOwnerWithThreshold") {
-    //       const [addedAddress, newThreshold] = transaction.dataDecoded.parameters;
-    //       const payload = {
-    //         ...activeMultisigData,
-    //         signatories: [...activeMultisigData.signatories, addedAddress.value],
-    //         threshold: newThreshold.value,
-    //       };
-    //       setActiveMultisigData(payload);
-    //       // updateDB(
-    //       //   UpdateDB.Update_Multisig,
-    //       //   { multisig: payload },
-    //       //   address,
-    //       //   network
-    //       // );
-    //     } else if (transaction.type === "removeOwner") {
-    //       const [, removedAddress, newThreshold] =
-    //         transaction.dataDecoded.parameters;
-    //       const payload = {
-    //         ...activeMultisigData,
-    //         signatories: activeMultisigData.signatories.filter(
-    //           (address: string) => address !== removedAddress.value
-    //         ),
-    //         threshold: newThreshold.value,
-    //       };
-    //       setActiveMultisigData(payload);
-    //       updateDB(
-    //         UpdateDB.Update_Multisig,
-    //         { multisig: payload },
-    //         address,
-    //         network
-    //       );
-    //     }
-    //   }
-    //   setQueuedTransactions(payload);
   };
 
   useEffect(() => {
@@ -97,31 +59,37 @@ const Queued: FC<IQueued> = ({ loading, setLoading, refetch, setRefetch }) => {
   }, [location.hash, queuedTransactions]);
 
   useEffect(() => {
-    if (!identityBackend) {
-      console.log("retiring");
-      return;
-    }
     (async () => {
       setLoading(true);
       try {
-        const identityData = await identityBackend.getPendingTx(activeMultisig);
-        const convertedData = identityData.data;
-        setQueuedTransactions(convertedData);
-        // if (convertedData?.length > 0)
-        // updateDB(
-        //   UpdateDB.Update_Pending_Transaction,
-        //   { transactions: convertedData },
-        //   address,
-        //   network
-        // );
+        const { data: getTransactionData } = await get_transactions(
+          activeMultisig,
+        );
+        const queuedTxn = [];
+        getTransactionData.forEach((txn) => {
+          const formatData = {
+            id: txn.id,
+            from_vault: txn.from_vault,
+            transaction_owner: txn.transaction_owner.toText(),
+            to: txn.to,
+            threshold: Number(txn.threshold),
+            approvals: txn.approvals.map((a) => {
+              return a?.[0].toText();
+            }),
+            amount: convertE8sToNumber(txn.amount),
+            created_at: Number(txn.created_at),
+            completed: txn.completed,
+          };
+          !txn.completed && queuedTxn.push(formatData);
+        });
+        setQueuedTransactions(queuedTxn);
       } catch (error) {
         console.log(error);
       } finally {
         setLoading(false);
       }
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeMultisig, address, refetch, identityBackend]);
+  }, [activeMultisig]);
 
   if (loading) {
     return (
@@ -140,21 +108,20 @@ const Queued: FC<IQueued> = ({ loading, setLoading, refetch, setRefetch }) => {
               dayjs(a.created_at).isBefore(dayjs(b.created_at)) ? 1 : -1,
             )
             .map((transaction) => {
+              console.log(transaction);
+              const milliseconds = transaction?.created_at / 1e6;
+              const date = dayjs(milliseconds).format("YYYY-MM-DD HH:mm:ss");
               return (
-                <section id={transaction.txHash} key={transaction.txHash}>
+                <section id={transaction.id} key={transaction.id}>
                   <Transaction
-                    value={transaction.amount_token}
+                    value={transaction.amount}
                     setQueuedTransactions={setQueuedTransactions}
-                    date={transaction.created_at}
-                    status={transaction.isExecuted ? "Executed" : "Approval"}
-                    approvals={
-                      transaction.approval
-                        ? transaction.approval.map((address: string) => address)
-                        : []
-                    }
-                    threshold={activeMultisigData?.threshold || 0}
-                    callData={transaction.data}
-                    callHash={transaction.txHash}
+                    date={milliseconds}
+                    status={transaction.completed ? "Executed" : "Approval"}
+                    approvals={transaction.approvals || []}
+                    threshold={currentMultisig?.threshold || 0}
+                    callData={transaction.id}
+                    callHash={transaction.id}
                     note={transaction.note || ""}
                     refetch={() => setRefetch((prev) => !prev)}
                     onAfterApprove={handleAfterApprove}
@@ -163,6 +130,7 @@ const Queued: FC<IQueued> = ({ loading, setLoading, refetch, setRefetch }) => {
                     notifications={transaction?.notifications || {}}
                     txType={transaction.category}
                     recipientAddress={transaction.to}
+                    owner={transaction.transaction_owner}
                   />
                 </section>
               );

@@ -15,6 +15,8 @@ import updateDB, { UpdateDB } from "@frontend/utils/updateDB";
 
 import NoTransactionsHistory from "./NoTransactionsHistory";
 import Transaction from "./Transaction";
+import useIcpVault from "@frontend/hooks/useIcpVault";
+import convertE8sToNumber from "@frontend/utils/convertE8sToNumber";
 
 interface IHistory {
   loading: boolean;
@@ -24,10 +26,9 @@ interface IHistory {
 
 const History: FC<IHistory> = ({ loading, setLoading, refetch }) => {
   const location = useLocation();
-  const { currentPage, setPage, totalDocs } = usePagination();
   const [transactions, setTransactions] = useState<any[]>([]);
-  const { activeMultisig, identityBackend } = useGlobalUserDetailsContext();
-  const { address } = useGlobalUserDetailsContext();
+  const { activeMultisig } = useGlobalUserDetailsContext();
+  const { get_transactions } = useIcpVault();
 
   useEffect(() => {
     const hash = location.hash.slice(1);
@@ -38,32 +39,37 @@ const History: FC<IHistory> = ({ loading, setLoading, refetch }) => {
   }, [location.hash, transactions]);
 
   useEffect(() => {
-    if (!identityBackend) {
-      return;
-    }
     (async () => {
       setLoading(true);
       try {
-        const identityData = (
-          await identityBackend.getTransactionHistory(activeMultisig)
-        ).data;
-        console.log(identityData);
-        const convertedData = identityData.data;
-        setTransactions(convertedData);
-        // updateDB(
-        //   UpdateDB.Update_History_Transaction,
-        //   { transactions: convertedData },
-        //   address,
-        //   network
-        // );
+        const { data: getTransactionData } = await get_transactions(
+          activeMultisig,
+        );
+        const completeTxn = [];
+        getTransactionData.forEach((txn) => {
+          const formatData = {
+            id: txn.id,
+            from_vault: txn.from_vault,
+            transaction_owner: txn.transaction_owner.toText(),
+            to: txn.to,
+            threshold: Number(txn.threshold),
+            approvals: txn.approvals.map((a) => {
+              return a?.[0].toText();
+            }),
+            amount: convertE8sToNumber(txn.amount),
+            created_at: Number(txn.created_at),
+            completed: txn.completed,
+          };
+          txn.completed && completeTxn.push(formatData);
+        });
+        setTransactions(completeTxn);
       } catch (error) {
         console.log(error);
       } finally {
         setLoading(false);
       }
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeMultisig, address, refetch, identityBackend]);
+  }, [activeMultisig]);
 
   if (loading) {
     return (
@@ -81,36 +87,18 @@ const History: FC<IHistory> = ({ loading, setLoading, refetch }) => {
             .sort((a, b) =>
               dayjs(a.created_at).isBefore(dayjs(b.created_at)) ? 1 : -1,
             )
-            .map((transaction, index) => {
-              return (
-                <section id={transaction.callHash} key={index}>
-                  <Transaction
-                    approvals={
-                      transaction.signatures
-                        ? transaction.signatures.map(
-                            (item: any) => item.address,
-                          )
-                        : []
-                    }
-                    {...transaction}
-                  />
-                </section>
-              );
-            })}
+            .map((transaction, index) => (
+              <section id={transaction.callHash} key={index}>
+                <Transaction
+                  approvals={transaction.signatures}
+                  {...transaction}
+                  data={transaction}
+                />
+              </section>
+            ))}
         </div>
       ) : (
         <NoTransactionsHistory />
-      )}
-      {totalDocs && totalDocs > 10 && (
-        <div className="flex justify-center">
-          <Pagination
-            className="self-end"
-            currentPage={currentPage}
-            defaultPageSize={2}
-            setPage={setPage}
-            totalDocs={totalDocs || 1}
-          />
-        </div>
       )}
     </>
   );

@@ -34,11 +34,15 @@ function create_vault() {
   return pattern;
 }
 export class IdentityBackendService {
-  add_address_to_address_book = async (owner: string, addressToAdd: string) => {
+  add_address_to_address_book = async (name: string, addressToAdd: string) => {
     try {
       const data = await icp_vault.add_address_to_address_book(
-        owner,
         addressToAdd,
+        name,
+        null,
+        null,
+        null,
+        null,
       );
       return { data, error: null };
     } catch (error) {
@@ -58,12 +62,13 @@ export class IdentityBackendService {
   };
 
   create_vault = async (
+    name: string,
     signatories: [string],
     threshold: bigint,
     owner: string,
   ) => {
     try {
-      const data = await icp_vault.create_vault(signatories, threshold, owner);
+      const data = await icp_vault.create_vault(name, signatories, threshold);
       return { data, error: null };
     } catch (error) {
       console.log("error from create_vault", error);
@@ -83,7 +88,7 @@ export class IdentityBackendService {
 
   get_all_vault_by_principle = async (owner: string) => {
     try {
-      const data = await icp_vault.get_all_vault_by_principle(owner);
+      const data = await icp_vault.get_all_vault_by_principle();
       return { data, error: null };
     } catch (error) {
       console.log("error from get_all_vault_by_principle", error);
@@ -129,7 +134,7 @@ export class IdentityBackendService {
 
   approve_transaction = async (vault: string, txId: string, owner: string) => {
     try {
-      const data = await icp_vault.approve_transaction(vault, txId, owner);
+      const data = await icp_vault.approve_transaction(vault, txId);
       return { data, error: null };
     } catch (error) {
       console.log("error from approve_transaction", error);
@@ -139,7 +144,7 @@ export class IdentityBackendService {
 
   cancel_transaction = async (vault: string, txId: string, owner: string) => {
     try {
-      const data = await icp_vault.cancel_transaction(vault, txId, owner);
+      const data = await icp_vault.cancel_transaction(vault, txId);
       return { data, error: null };
     } catch (error) {
       console.log("error from cancel_transaction", error);
@@ -149,7 +154,7 @@ export class IdentityBackendService {
 
   get_transactions = async (vault: string, owner: string) => {
     try {
-      const data = await icp_vault.get_transactions(vault, owner);
+      const data = await icp_vault.get_transactions(vault);
       return { data, error: null };
     } catch (error) {
       console.log("error from cancel_transaction", error);
@@ -164,13 +169,7 @@ export class IdentityBackendService {
     amount: bigint,
   ) => {
     try {
-      const data = await icp_vault.create_transactions(
-        vault,
-        owner,
-        to,
-        amount,
-      );
-      return { data, error: null };
+      console.log("something");
     } catch (error) {
       console.log("error from create_transactions", error);
       return { data: null, error };

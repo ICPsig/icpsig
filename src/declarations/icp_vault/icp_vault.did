@@ -1,35 +1,134 @@
+type Vault = 
+ record {
+   admin: principal;
+   created_at: int;
+   name: text;
+   signers: Signers;
+   threshold: nat;
+ };
 type Transaction = 
  record {
    amount: nat;
    approvals: List;
    completed: bool;
    created_at: int;
+   currencyType: text;
    from_vault: text;
    id: text;
    threshold: nat;
    to: text;
+   toPrincipal: principal;
    transaction_owner: principal;
  };
-type Tokens = record {e8s: nat64;};
+type TowFAType = 
+ record {
+   base32_secret: text;
+   enabled: bool;
+   tfaToken: text;
+   url: text;
+   verified: bool;
+ };
+type Signers = 
+ opt record {
+       principal;
+       List;
+     };
+type SignRequest = 
+ record {
+   chain_id: nat;
+   data: opt text;
+   gas: nat;
+   max_fee_per_gas: nat;
+   max_priority_fee_per_gas: nat;
+   nonce: nat;
+   to: text;
+   value: nat;
+   vault: text;
+ };
+type ReturnVault = 
+ record {
+   admin: principal;
+   created_at: int;
+   name: text;
+   signers: vec principal;
+   threshold: nat;
+ };
 type Multisig = 
  service {
-   add_address_to_address_book: (text, text) -> (vec principal);
+   add_address_to_address_book: (text, text, text, text, text, text) ->
+    (vec AddressBook);
    add_signatory: (text, text, nat) -> (bool);
-   approve_transaction: (text, text, text) -> (bool);
-   cancel_transaction: (text, text, text) -> (bool);
-   create_transactions: (text, text, text, nat) -> (bool);
-   create_vault: (vec text, nat, text) -> (text);
+   approve_transaction: (text, text) -> (bool);
+   cancel_transaction: (text, text) -> (bool);
+   create_transactions: (text, text, nat, text, text) -> (Transaction);
+   create_vault: (text, vec text, nat) ->
+    (record {
+       address: text;
+       multisig: ReturnVault;
+     });
    getCanisterPrincipal: () -> (principal);
-   get_address_book: (text) -> (vec principal) query;
-   get_all_vault_by_principle: (text) -> (vec text) query;
-   get_multisig_balance: (text) -> (Tokens);
-   get_transactions: (text, text) -> (vec Transaction) query;
-   greet: (text) -> (text) query;
+   get_2FA_data: () -> (TowFAType) query;
+   get_ETH_address: (text) -> (text);
+   get_address_book: (text) -> (vec AddressBook) query;
+   get_all_vault: (text) -> (vec Vault);
+   get_all_vault_balace: () ->
+    (vec record {
+           address: text;
+           balance: record {
+                      ckbtc: nat;
+                      icp: nat64;
+                    };
+         });
+   get_all_vault_by_principle: () ->
+    (vec record {
+           address: text;
+           multisig: opt ReturnVault;
+         }) query;
+   get_btc_address: (text) -> (text);
+   get_ckbtc_balance: (text, principal) -> (nat);
+   get_eth_address_from_vault: (text) ->
+    (variant {
+       Err: text;
+       Ok: record {address: text;};
+     });
+   get_eth_balance: (text, principal) -> (nat);
+   get_multisig_balance: (text) -> (record {
+                                      ckbtc: nat;
+                                      icp: nat64;
+                                    });
+   get_subaccount: (text) -> (vec nat8) query;
+   get_transactions: (text) -> (vec Transaction) query;
+   greet: () -> (text) query;
    remove_signatory: (text, principal, nat) -> (bool);
+   retrive_btc_from_ckBtc: (text, text, nat64) ->
+    (record {
+       block: nat64;
+       isSuccess: bool;
+     });
+   save_2FA_data: (text, text, bool, bool, text) -> (TowFAType);
+   sign: (SignRequest, text) ->
+    (variant {
+       Err: text;
+       Ok: record {
+             signature_hex: text;
+             signed_hash: text;
+           };
+     });
+   sign_eth_transaction: (SignRequest) -> (text);
+   update_btc_to_ckBtc: (text) -> (bool);
  };
 type List = 
  opt record {
        principal;
        List;
      };
+type AddressBook = 
+ record {
+   address: text;
+   discord: text;
+   email: text;
+   name: text;
+   role: text;
+   telegram: text;
+ };
 service : () -> Multisig

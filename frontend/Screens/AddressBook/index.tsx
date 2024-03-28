@@ -31,7 +31,7 @@ const AddressBook = ({ className }: { className?: string }) => {
   const { addressBook, loading } = useGlobalUserDetailsContext();
   const { records } = useActiveMultisigContext();
   const { openModal } = useModalContext();
-  const { account: userAddress } = useGlobalIdentityContext();
+  const { principal: userAddress } = useGlobalIdentityContext();
   const [addresses, setAddresses] = useState<IAllAddresses>({} as any);
   const [openAddAddressModal, setOpenAddAddressModal] =
     useState<boolean>(false);

@@ -31,7 +31,7 @@ interface ISentInfoProps {
     category: string;
     subfields: { [subfield: string]: { name: string; value: string } };
   };
-  date: Date;
+  date: string;
   // time: string;
   loading: boolean;
   addressAddOrRemove?: string;
@@ -54,6 +54,8 @@ interface ISentInfoProps {
   getMultiDataLoading?: boolean;
   txType?: string;
   transactionDetailsLoading: boolean;
+  handleExecuteTransaction: any;
+  owner: string;
 }
 
 const SentInfo: FC<ISentInfoProps> = ({
@@ -73,6 +75,8 @@ const SentInfo: FC<ISentInfoProps> = ({
   handleCancelTransaction,
   txType,
   note,
+  handleExecuteTransaction,
+  owner,
   transactionDetailsLoading,
 }) => {
   const {
@@ -189,7 +193,7 @@ const SentInfo: FC<ISentInfoProps> = ({
           </span>
           <p className="flex items-center gap-x-3 font-normal text-xs leading-[13px] text-text_secondary">
             <span className="text-white font-normal text-sm leading-[15px]">
-              {dayjs(date).format("llll")}
+              {date}
             </span>
           </p>
         </div>
@@ -208,46 +212,6 @@ const SentInfo: FC<ISentInfoProps> = ({
         )}
         {showDetails && (
           <>
-            {/* <div className='flex items-center gap-x-5 mt-3 justify-between'>
-							<span className='text-text_secondary font-normal text-sm leading-[15px]'>
-								Created By:
-							</span>
-							<p className='flex items-center gap-x-3 font-normal text-xs leading-[13px] text-text_secondary'>
-								<span className='text-white font-normal text-sm leading-[15px]'>
-									<div className='mt-3 flex items-center gap-x-4'>
-										{recipientAddress && (
-											<MetaMaskAvatar address={recipientAddress} size={30} />
-										)}
-										<div className='flex flex-col gap-y-[6px]'>
-											<p className='font-medium text-sm leading-[15px] text-white'>
-												{recipientAddress
-													? addressBook?.find(
-														(item: any) => item.address === recipientAddress
-													)?.name || DEFAULT_ADDRESS_NAME
-													: '?'}
-											</p>
-											{recipientAddress && (
-												<p className='flex items-center gap-x-3 font-normal text-xs leading-[13px] text-text_secondary'>
-													<span>{shortenAddress(recipientAddress)}</span>
-													<span className='flex items-center gap-x-2 text-sm'>
-														<button onClick={() => copyText(recipientAddress)}>
-															<CopyIcon className='hover:text-primary' />
-														</button>
-														<a
-															href={`https://${network}.subscan.io/account/${recipientAddress}`}
-															target='_blank'
-															rel='noreferrer'
-														>
-															<ExternalLinkIcon />
-														</a>
-													</span>
-												</p>
-											)}
-										</div>
-									</div>
-								</span>
-							</p>
-						</div> */}
             <div className="flex items-center gap-x-5 mt-3 justify-between">
               <span className="text-text_secondary font-normal text-sm leading-[15px]">
                 Txn Hash:
@@ -418,6 +382,17 @@ const SentInfo: FC<ISentInfoProps> = ({
                 Approve Transaction
               </Button>
             )}
+            {approvals.includes(userAddress) &&
+              owner === userAddress &&
+              approvals.length === threshold && (
+                <Button
+                  loading={loading}
+                  onClick={handleExecuteTransaction}
+                  className={`w-full border-none text-sm font-normal bg-primary text-white`}
+                >
+                  Excecute Transaction
+                </Button>
+              )}
           </div>
         </div>
       </article>

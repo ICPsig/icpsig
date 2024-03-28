@@ -1,121 +1,167 @@
 // Copyright 2022-2023 @Polkasafe/polkaSafe-ui authors & contributors
 // This software may be modified and distributed under the terms
 // of the Apache-2.0 license. See the LICENSE file for details.
-import { Button, Form, Input, Modal, QRCode } from "antd"
-import React, { useState } from "react"
-import { useGlobalUserDetailsContext } from "@frontend/context/UserDetailsContext"
+import { Button, Form, Input, Modal, QRCode } from "antd";
+import React, { useState } from "react";
+import { useGlobalUserDetailsContext } from "@frontend/context/UserDetailsContext";
 import {
+  I2FASettings,
   IGenerate2FAResponse,
   IUser,
   NotificationStatus,
-} from "@frontend/types"
+} from "@frontend/types";
 import {
   CopyIcon,
   OutlineCloseIcon,
   PasswordFilledIcon,
   PasswordOutlinedIcon,
-} from "@frontend/ui-components/CustomIcons"
-import Loader from "@frontend/ui-components/Loader"
-import queueNotification from "@frontend/ui-components/QueueNotification"
-import copyText from "@frontend/utils/copyText"
+} from "@frontend/ui-components/CustomIcons";
+import Loader from "@frontend/ui-components/Loader";
+import queueNotification from "@frontend/ui-components/QueueNotification";
+import copyText from "@frontend/utils/copyText";
 
-import CancelBtn from "../CancelBtn"
-import ModalBtn from "../ModalBtn"
+import CancelBtn from "../CancelBtn";
+import ModalBtn from "../ModalBtn";
+import { FIREBASE_FUNCTIONS_URL } from "@frontend/global/firebaseFunctionsUrl";
+import { generateBitcoinAddress } from "@frontend/utils/generateBitcoinAddress";
+import { icp_vault } from "src/declarations/icp_vault";
+import { icpsig_backend } from "@frontend/services/icp_backend";
+import axios from "axios";
+import { get2FASecret } from "@frontend/utils/2fa/generate2FASecret";
+import useIcpVault from "@frontend/hooks/useIcpVault";
+import { verify2FASecret } from "@frontend/utils/2fa/verify2FA";
 
 const Enable2FA = ({ className }: { className?: string }) => {
-  const [loading, setLoading] = useState<boolean>(false)
+  const [loading, setLoading] = useState<boolean>(false);
 
-  const [qrCodeLoading, setQrCodeLoading] = useState<boolean>(false)
+  const [qrCodeLoading, setQrCodeLoading] = useState<boolean>(false);
 
   const { two_factor_auth, address, setUserDetailsContextState } =
-    useGlobalUserDetailsContext()
-  const [showModal, setShowModal] = useState<boolean>(false)
+    useGlobalUserDetailsContext();
+  const [showModal, setShowModal] = useState<boolean>(false);
 
-  const [tFaSecret, setTFaSecret] = useState<IGenerate2FAResponse>()
+  const [tFaSecret, setTFaSecret] = useState<I2FASettings>();
 
-  const [authCode, setAuthCode] = useState<number>()
+  const [authCode, setAuthCode] = useState<number>();
+
+  const { save_2FA_data } = useIcpVault();
 
   const fetch2FASecret = async () => {
     // don't submit if loading or if user is already 2FA enabled
-    if (loading || !address || two_factor_auth?.enabled) return
+    if (loading || !address || two_factor_auth?.enabled) return;
+    setQrCodeLoading(true);
 
-    setQrCodeLoading(true)
-    const { data: generate2FaData, error: generate2FaError } = await (
-      await fetch(`api/2fa/generate2FASecret`)
-    ).json()
+    const generate2FaData = get2FASecret(address);
 
-    console.log(generate2FaData)
     if (
-      generate2FaError ||
       !generate2FaData ||
-      !generate2FaData.base32_secret ||
-      !generate2FaData.url
+      !generate2FaData?.base32_secret ||
+      !generate2FaData?.url
     ) {
       queueNotification({
         header: "Failed!",
-        message: generate2FaError,
+        message: "There is some issue with generating Secret",
         status: NotificationStatus.ERROR,
-      })
-      console.error("2FA error : ", generate2FaError)
-      return
+      });
+      console.error("2FA error :");
+      return;
+    }
+    const { data, error } = await save_2FA_data(
+      generate2FaData.base32_secret,
+      generate2FaData.url,
+      false,
+      false,
+    );
+
+    if (error || !data) {
+      queueNotification({
+        header: "Failed!",
+        message: "There is some issue with saving Secret",
+        status: NotificationStatus.ERROR,
+      });
+      console.error("2FA error :");
+      return;
     }
 
-    setTFaSecret(generate2FaData)
-    setQrCodeLoading(false)
-  }
+    console.log(data, "2FA Line 81");
+
+    setTFaSecret(data);
+    setQrCodeLoading(false);
+  };
 
   const handleModalOpen = async () => {
-    setShowModal(true)
-    await fetch2FASecret()
-  }
+    setShowModal(true);
+    await fetch2FASecret();
+  };
 
   const handleVerifyTFA = async () => {
     // don't submit if loading or if user is already 2FA enabled
-    if (loading || !address || two_factor_auth?.enabled) return
+    if (loading || !address || two_factor_auth?.enabled) return;
 
-    setLoading(true)
+    setLoading(true);
     try {
       if (!authCode || Number.isNaN(authCode))
-        throw new Error("Please input a valid auth code")
+        throw new Error("Please input a valid auth code");
 
       // send as string just in case it starts with 0
-      const { data: verify2FAData, error: verify2FAError } = await (
-        await fetch(`api/2fa/verify2FA`)
-      ).json()
+      const { data: verify2FAData, error: verify2FAError } = verify2FASecret(
+        Number(authCode),
+        tFaSecret,
+        address,
+      );
 
-      if (verify2FAError || !verify2FAData) {
-        setLoading(false)
+      if (verify2FAError) {
+        setLoading(false);
         queueNotification({
           header: "Failed",
           message: verify2FAError,
           status: NotificationStatus.ERROR,
-        })
-        return
+        });
+        return;
       }
 
-      setUserDetailsContextState((prevState) => {
+      const { data, error } = await save_2FA_data(
+        tFaSecret.base32_secret,
+        tFaSecret.url,
+        true,
+        true,
+      );
+
+      console.log(data, "2FA Line 125");
+
+      if (error) {
+        queueNotification({
+          header: "Failed!",
+          message: error,
+          status: NotificationStatus.ERROR,
+        });
+        console.error("2FA verify error :");
+        return;
+      }
+
+      setUserDetailsContextState((prevState: any) => {
         return {
           ...prevState,
-          two_factor_auth: verify2FAData.two_factor_auth,
-        }
-      })
+          two_factor_auth: data,
+        };
+      });
 
       queueNotification({
         header: "Success",
         message: "Two factor authentication enabled successfully!",
         status: NotificationStatus.SUCCESS,
-      })
+      });
 
-      setShowModal(false)
+      setShowModal(false);
     } catch (error) {
-      setLoading(false)
+      setLoading(false);
       queueNotification({
         header: "Failed",
         message: error,
         status: NotificationStatus.ERROR,
-      })
+      });
     }
-  }
+  };
 
   return (
     <>
@@ -255,12 +301,12 @@ const Enable2FA = ({ className }: { className?: string }) => {
             icon={<PasswordFilledIcon />}
             className="flex items-center p-0 outline-none border-none bg-transparant text-primary"
           >
-            Enable Two-Factor Authentication
+            {!two_factor_auth ? "Enable" : "Disable"} Two-Factor Authentication
           </Button>
         </div>
       </div>
     </>
-  )
-}
+  );
+};
 
-export default Enable2FA
+export default Enable2FA;

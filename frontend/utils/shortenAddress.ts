@@ -6,8 +6,7 @@ export default (address: string, shortenAddressLength: number = 4) => {
   if (!address || address.length < 8) {
     return address
   }
-
-  return `${address.substring(0, shortenAddressLength)}...${address.substring(
+  return `${address?.substring(0, shortenAddressLength)}...${address.substring(
     address.length - shortenAddressLength,
   )}`
 }

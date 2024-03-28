@@ -7,110 +7,147 @@ import React, { useCallback, useEffect, useState } from "react";
 import ConnectWalletImg from "@frontend/assets/connect-wallet.svg";
 import { useGlobalIdentityContext } from "@frontend/context/IdentityProviderContext";
 import { useGlobalUserDetailsContext } from "@frontend/context/UserDetailsContext";
-import { firebaseFunctionsHeader } from "@frontend/global/firebaseFunctionsHeader";
 import { FIREBASE_FUNCTIONS_URL } from "@frontend/global/firebaseFunctionsUrl";
-import { IUser } from "@frontend/types";
 import { WarningCircleIcon } from "@frontend/ui-components/CustomIcons";
+import useIcpVault from "@frontend/hooks/useIcpVault";
+import { v4 as uuidv4 } from "uuid";
+import { I2FAToken, NotificationStatus } from "@frontend/types";
+import queueNotification from "@frontend/ui-components/QueueNotification";
+import dayjs from "dayjs";
+import { TOTP } from "otpauth";
 
 const ConnectWallet = () => {
-  const { identity, login, setAccounts, account, setPrincipal } =
-    useGlobalIdentityContext();
+  const { login, setPrincipal, agent, authClient } = useGlobalIdentityContext();
   const [loading, setLoading] = useState<boolean>(false);
-  const { connectAddress } = useGlobalUserDetailsContext();
   const [tfaToken, setTfaToken] = useState<string>("");
   const [authCode, setAuthCode] = useState<number>();
   const [tokenExpired, setTokenExpired] = useState<boolean>(false);
+  const { save_2FA_data, get_2FA_data } = useIcpVault();
 
-  const handlePolkasafeLogin = async () => {
-    const res = await fetch(`${FIREBASE_FUNCTIONS_URL}/login`, {
-      body: JSON.stringify({ account }),
-      headers: {
-        "Content-Type": "application/json",
-      },
-      method: "POST",
-    });
-    const { token } = await res.json();
+  const checkTwoFA = async () => {
+    if (!save_2FA_data || !get_2FA_data || tfaToken) {
+      return;
+    }
+    setLoading(true);
+    const { data: two_factor_auth, error } = await get_2FA_data();
+
+    if (error) {
+      queueNotification({
+        header: "Failed",
+        message: "Error in 2fa",
+        status: NotificationStatus.ERROR,
+      });
+      setLoading(false);
+    }
+
+    if (two_factor_auth?.enabled) {
+      const tfaToken = uuidv4();
+      const { data: token, error: saveError } = await save_2FA_data(
+        two_factor_auth?.base32_secret,
+        two_factor_auth?.url,
+        two_factor_auth?.enabled,
+        two_factor_auth?.verified,
+        tfaToken,
+      );
+      setTfaToken(token.tfaToken);
+      setLoading(false);
+      return;
+    }
+    const identity = authClient.getIdentity();
+    const principal = identity.getPrincipal().toText();
+    setPrincipal(principal);
+    setLoading(false);
   };
 
-  const handleLoginByInternetIdentity = useCallback(async () => {
+  const handleLoginByInternetIdentity = async () => {
     try {
       setLoading(true);
-      if (!identity) {
-        login();
-        connectAddress();
-        setLoading(false);
-        return;
-      }
+      await login();
+      console.log("Enter");
     } catch (err) {
       console.log(err);
     }
     setLoading(false);
-  }, []);
-
-  const handleLoginByPlug = async () => {
-    //@ts-ignore
-    const icWidnowObject = window.ic.plug;
-
-    if (icWidnowObject?.sessionManager?.sessionData) {
-      return;
-    }
-    const whitelist = [];
-    const host = "https://mainnet.dfinity.network";
-    //@ts-ignore
-    const onConnectionUpdate = async () => {};
-
-    try {
-      await icWidnowObject.requestConnect({
-        whitelist,
-        host,
-        onConnectionUpdate,
-        timeout: 100000,
-      });
-      const principal = icWidnowObject.sessionManager.sessionData.principalId;
-      const account = icWidnowObject.sessionManager.sessionData.accountId;
-
-      setPrincipal(principal);
-      setAccounts(account);
-      // backend call for checking if identity has 2fa enabled (if yes -> call handleSubmitAuthCode)
-      localStorage.setItem("principal", principal);
-      localStorage.setItem("address", account);
-      connectAddress(account);
-    } catch (e) {
-      console.log(e);
-    }
   };
+
+  // const handleLoginByPlug = async () => {
+  //   //@ts-ignore
+  //   const icWidnowObject = window.ic.plug;
+  //   const whitelist = [];
+  //   const host = "https://mainnet.dfinity.network";
+
+  //   //@ts-ignore
+  //   const onConnectionUpdate = async () => {};
+
+  //   try {
+  //     await icWidnowObject.requestConnect({
+  //       whitelist,
+  //       host,
+  //       onConnectionUpdate,
+  //       timeout: 100000,
+  //     });
+  //     const account = icWidnowObject.sessionManager.sessionData.accountId;
+  //     const agent = icWidnowObject.sessionManager.sessionData.agent;
+  //     icWidnowObject.sessionManager.sessionData;
+  //     console.log(icWidnowObject.sessionManager.sessionData);
+  //     setPrincipal("2vxsx-fae");
+  //     // backend call for checking if identity has 2fa enabled (if yes -> call handleSubmitAuthCode)
+  //     localStorage.setItem("principal", "2vxsx-fae");
+  //     localStorage.setItem("address", account);
+  //     console.log(agent);
+  //     setAgent(agent);
+  //     connectAddress();
+  //   } catch (e) {
+  //     console.log(e);
+  //   }
+  // };
 
   const handleSubmitAuthCode = async () => {
     if (!tfaToken) return;
-
     setLoading(true);
     try {
-      // api call for validate 2fa auth code from authenticator app
-      const { data: token, error: validate2FAError } = await (
-        await fetch(`api/2fa/validate2FA`, {
-          headers: {
-            authCode: JSON.stringify(authCode),
-            tfa_token: tfaToken,
-          },
-          body: JSON.stringify({ address: "" }),
-        })
-      ).json();
+      if (!authClient) {
+        return;
+      }
+      const identity = authClient.getIdentity();
+      const principal = identity.getPrincipal().toText();
+      const { data: two_factor_auth, error } = await get_2FA_data();
+      const totp = new TOTP({
+        algorithm: "SHA1",
+        digits: 6,
+        issuer: "ICPSig",
+        label: principal,
+        period: 30,
+        secret: two_factor_auth.base32_secret,
+      });
 
-      if (validate2FAError) {
-        if (validate2FAError === "2FA token expired.") {
-          setTokenExpired(true);
-        }
+      const isValidToken =
+        totp.validate({
+          token: String(authCode).replaceAll(/\s/g, ""),
+          window: 1,
+        }) !== null;
+      if (!isValidToken) {
+        queueNotification({
+          header: "Failed",
+          message: "Error in validation",
+          status: NotificationStatus.ERROR,
+        });
         setLoading(false);
+        return;
       }
-
-      if (!validate2FAError && token) {
-        handleLoginByPlug();
-      }
+      setPrincipal(principal);
     } catch (error) {
       console.log(error);
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!agent) {
+      return;
+    }
+    checkTwoFA();
+  }, [agent, save_2FA_data]);
 
   return (
     <div className="rounded-xl flex flex-col items-center justify-center min-h-[400px] bg-bg-main">
@@ -204,7 +241,7 @@ const ConnectWallet = () => {
               >
                 Sign In by internet identity
               </Button>
-              <Button
+              {/* <Button
                 onClick={handleLoginByPlug}
                 loading={loading}
                 className={
@@ -212,7 +249,7 @@ const ConnectWallet = () => {
                 }
               >
                 Sign In by plug wallet
-              </Button>
+              </Button> */}
             </div>
           </>
         )}

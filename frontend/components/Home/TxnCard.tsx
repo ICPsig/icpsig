@@ -24,6 +24,8 @@ import updateDB, { UpdateDB } from "@frontend/utils/updateDB";
 
 import BottomLeftArrow from "@frontend/assets/icons/bottom-left-arrow.svg";
 import TopRightArrow from "@frontend/assets/icons/top-right-arrow.svg";
+import useIcpVault from "@frontend/hooks/useIcpVault";
+import convertE8sToNumber from "@frontend/utils/convertE8sToNumber";
 
 const DEFAULT_TXN_CARD_LIMIT = 8;
 
@@ -31,20 +33,36 @@ const TxnCard = () => {
   const { activeMultisig, address, identityBackend, addressBook } =
     useGlobalUserDetailsContext();
   const [queuedTransactions, setQueuedTransactions] = useState<any>([]);
-  const [completedTransactions, setCompletedTransactions] = useState<
-    IHistoryTransactions[]
-  >([]);
+  const [completedTransactions, setCompletedTransactions] = useState<any>([]);
   const [loading, setLoading] = useState<boolean>(false);
+  const { get_transactions } = useIcpVault();
+
   const handleTransactions = useCallback(async () => {
     setLoading(true);
     try {
-      const identityCompletedData = (
-        await identityBackend.getTransactionHistory(activeMultisig)
-      ).data;
-      const identityData = (await identityBackend.getPendingTx(activeMultisig))
-        .data;
-      setQueuedTransactions(identityData);
-      setCompletedTransactions(identityCompletedData);
+      const { data: allTxn } = await get_transactions(activeMultisig);
+      const queuedTxn = [];
+      const completeTxn = [];
+      allTxn.forEach((txn) => {
+        const formatData = {
+          id: txn.id,
+          from_vault: txn.from_vault,
+          transaction_owner: txn.transaction_owner.toText(),
+          to: txn.to,
+          threshold: Number(txn.threshold),
+          approvals: txn.approvals.map((a) => {
+            return a?.[0].toText();
+          }),
+          amount: convertE8sToNumber(txn.amount),
+          created_at: txn.created_at,
+          completed: txn.completed,
+        };
+        txn.completed
+          ? completeTxn.push(formatData)
+          : queuedTxn.push(formatData);
+      });
+      setQueuedTransactions(queuedTxn);
+      setCompletedTransactions(completeTxn);
     } catch (e) {
       console.log(e);
     } finally {
@@ -192,9 +210,7 @@ const TxnCard = () => {
                   }
                   return (
                     <Link
-                      to={`/transactions?tab=History#${
-                        transaction?.txHash || ""
-                      }`}
+                      to={`/transactions?tab=History#${transaction?.id || ""}`}
                       key={i}
                       className="flex items-center pb-2 mb-2"
                     >
@@ -231,7 +247,7 @@ const TxnCard = () => {
                               ) : transaction.to ? (
                                 <>To: {toText}</>
                               ) : (
-                                `Txn: ${shortenAddress(transaction?.txHash)}`
+                                `Txn: ${shortenAddress(transaction?.to)}`
                               )}
                             </span>
                           </h1>
@@ -244,12 +260,12 @@ const TxnCard = () => {
                         transaction.type === "removeOwner" ? (
                           <span className="text-md text-white">-?</span>
                         ) : sent ? (
-                          <h1 className="text-md text-failure">
-                            -{(transaction?.value?.[0] || 0)?.toString()}
+                          <h1 className="text-md text-success">
+                            +{(transaction?.amount || 0)?.toString()}
                           </h1>
                         ) : (
-                          <h1 className="text-md text-success">
-                            +{(transaction?.value?.[0] || 0)?.toString()}
+                          <h1 className="text-md text-failure">
+                            -{(transaction?.amount || 0)?.toString()}
                           </h1>
                         )}
                       </div>

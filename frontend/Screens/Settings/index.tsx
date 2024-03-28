@@ -1,34 +1,32 @@
 // Copyright 2022-2023 @Polkasafe/polkaSafe-ui authors & contributors
 // This software may be modified and distributed under the terms
 // of the Apache-2.0 license. See the LICENSE file for details.
-import classNames from "classnames"
-import React, { useEffect, useState } from "react"
-import ManageMultisig from "@frontend/components/Settings/ManageMultisig"
-import TransactionFields from "@frontend/components/Settings/TransactionFields"
-import TwoFactorAuth from "@frontend/components/Settings/TwoFactorAuth"
-import { useGlobalUserDetailsContext } from "@frontend/context/UserDetailsContext"
-import Loader from "@frontend/ui-components/Loader"
+import classNames from "classnames";
+import React, { useEffect, useState } from "react";
+import ManageMultisig from "@frontend/components/Settings/ManageMultisig";
+import TransactionFields from "@frontend/components/Settings/TransactionFields";
+import TwoFactorAuth from "@frontend/components/Settings/TwoFactorAuth";
+import { useGlobalUserDetailsContext } from "@frontend/context/UserDetailsContext";
+import Loader from "@frontend/ui-components/Loader";
 
 enum ETab {
   SIGNATORIES,
-  NOTIFICATIONS,
-  TRANSACTIONS,
   ADMIN,
 }
 
 const Settings = () => {
-  const [tab, setTab] = useState(ETab.SIGNATORIES)
-  const [loading, setLoading] = useState<boolean>(true)
-  const { activeMultisigData } = useGlobalUserDetailsContext()
+  const [tab, setTab] = useState(ETab.SIGNATORIES);
+  const [loading, setLoading] = useState<boolean>(true);
+  const { activeMultisig } = useGlobalUserDetailsContext();
 
   useEffect(() => {
-    if (Object.keys(activeMultisigData).length > 0) {
-      setLoading(false)
+    if (activeMultisig) {
+      setLoading(false);
     }
-  }, [activeMultisigData])
+  }, [activeMultisig]);
 
   if (loading) {
-    return <Loader size="large" />
+    return <Loader size="large" />;
   }
   return (
     <div className="scale-[80%] h-[125%] w-[125%] origin-top-left">
@@ -46,29 +44,6 @@ const Settings = () => {
           Signatories
         </button>
         <button
-          onClick={() => setTab(ETab.NOTIFICATIONS)}
-          className={classNames(
-            "rounded-lg p-3 text-sm leading-[15px] w-[110px] text-white",
-            {
-              "text-primary bg-highlight": tab === ETab.NOTIFICATIONS,
-            },
-          )}
-        >
-          {/* <HistoryIcon/> */}
-          Notifications
-        </button>
-        <button
-          onClick={() => setTab(ETab.TRANSACTIONS)}
-          className={classNames(
-            "rounded-lg p-3 text-sm leading-[15px] text-white",
-            {
-              "text-primary bg-highlight": tab === ETab.TRANSACTIONS,
-            },
-          )}
-        >
-          Transaction Fields
-        </button>
-        <button
           onClick={() => setTab(ETab.ADMIN)}
           className={`rounded-lg p-3 text-sm leading-[15px] w-[110px] text-white ${
             tab === ETab.ADMIN && "text-primary bg-highlight"
@@ -80,15 +55,9 @@ const Settings = () => {
           </span>
         </button>
       </div>
-      {tab === ETab.SIGNATORIES ? (
-        <ManageMultisig />
-      ) : tab === ETab.TRANSACTIONS ? (
-        <TransactionFields />
-      ) : (
-        <TwoFactorAuth />
-      )}
+      {tab === ETab.SIGNATORIES ? <ManageMultisig /> : <TwoFactorAuth />}
     </div>
-  )
-}
+  );
+};
 
-export default Settings
+export default Settings;

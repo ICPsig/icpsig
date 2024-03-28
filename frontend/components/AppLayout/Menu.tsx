@@ -43,7 +43,7 @@ const Menu: FC<Props> = ({ className }) => {
     activeMultisig,
     multisigSettings,
   } = useGlobalUserDetailsContext();
-  const { account: userAddress } = useGlobalIdentityContext();
+  const { principal: userAddress } = useGlobalIdentityContext();
   const [selectedMultisigAddress, setSelectedMultisigAddress] = useState(
     activeMultisig || localStorage.getItem("active_multisig") || "",
   );
@@ -80,19 +80,11 @@ const Menu: FC<Props> = ({ className }) => {
   ];
 
   if (userAddress) {
-    menuItems.push(
-      {
-        icon: <NotificationIcon />,
-        key: "/notification-settings",
-        title: "Notifications",
-        disabled: true,
-      },
-      {
-        icon: <SettingsIcon />,
-        key: "/settings",
-        title: "Settings",
-      },
-    );
+    menuItems.push({
+      icon: <SettingsIcon />,
+      key: "/settings",
+      title: "Settings",
+    });
   }
 
   const AddMultisigModal: FC = () => {
@@ -179,42 +171,33 @@ const Menu: FC<Props> = ({ className }) => {
       <section className="overflow-y-auto max-h-full [&::-webkit-scrollbar]:hidden flex-1 mb-3">
         {multisigAddresses && (
           <ul className="flex flex-col gap-y-2 py-3 text-white list-none">
-            {multisigAddresses
-              .filter(
-                (multisig) =>
-                  !multisigSettings?.[`${multisig.address}_${multisig.network}`]
-                    ?.deleted && !multisig.disabled,
-              )
-              .map((multisig) => {
-                return (
-                  <li className="w-full" key={multisig.address}>
-                    <button
-                      className={classNames(
-                        "w-full flex items-center gap-x-2 flex-1 rounded-lg p-3 font-medium text-[13px]",
-                        {
-                          "bg-highlight text-primary":
-                            multisig.address === selectedMultisigAddress,
-                        },
-                      )}
-                      onClick={() => {
-                        setUserDetailsContextState((prevState: any) => {
-                          return {
-                            ...prevState,
-                            activeMultisig: multisig.address,
-                          };
-                        });
-                        localStorage.setItem(
-                          "active_multisig",
-                          multisig.address,
-                        );
-                      }}
-                    >
-                      <Avatar address={multisig.address} size={5} />
-                      <span className="truncate">{multisig.name}</span>
-                    </button>
-                  </li>
-                );
-              })}
+            {multisigAddresses.map((multisig) => {
+              return (
+                <li className="w-full" key={multisig.address}>
+                  <button
+                    className={classNames(
+                      "w-full flex items-center gap-x-2 flex-1 rounded-lg p-3 font-medium text-[13px]",
+                      {
+                        "bg-highlight text-primary":
+                          multisig.address === selectedMultisigAddress,
+                      },
+                    )}
+                    onClick={() => {
+                      setUserDetailsContextState((prevState: any) => {
+                        return {
+                          ...prevState,
+                          activeMultisig: multisig.address,
+                        };
+                      });
+                      localStorage.setItem("active_multisig", multisig.address);
+                    }}
+                  >
+                    <Avatar address={multisig.address} size={5} />
+                    <span className="truncate">{multisig.name}</span>
+                  </button>
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>

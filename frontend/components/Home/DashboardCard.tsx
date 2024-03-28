@@ -5,7 +5,7 @@
 import { PlusCircleOutlined } from "@ant-design/icons";
 import { Modal } from "antd";
 import { Spin } from "antd";
-import React, { FC, useState } from "react";
+import React, { FC, useEffect, useState } from "react";
 import astarLogo from "@frontend/assets/icp-logo.png";
 import { useModalContext } from "@frontend/context/ModalContext";
 import { useGlobalUserDetailsContext } from "@frontend/context/UserDetailsContext";
@@ -23,7 +23,11 @@ import styled from "styled-components";
 import FundMultisig from "../SendFunds/FundMultisig";
 import SendFundsForm from "../SendFunds/SendFundsForm";
 import Avatar from "../Avatar/Avatar";
-import { mainBalance } from "@frontend/ui-components/Balance";
+import useIcpVault from "@frontend/hooks/useIcpVault";
+import convertE8sToNumber from "@frontend/utils/convertE8sToNumber";
+import Loader from "@frontend/ui-components/Loader";
+import { encodePrincipalToEthAddress } from "@dfinity/cketh";
+import { useGlobalIdentityContext } from "@frontend/context/IdentityProviderContext";
 
 interface IDashboardCard {
   className?: string;
@@ -42,21 +46,26 @@ const DashboardCard = ({
   openTransactionModal,
   setOpenTransactionModal,
 }: IDashboardCard) => {
-  const { activeMultisig, multisigAddresses, activeMultisigData } =
+  const { activeMultisig, multisigAddresses, balanceLoading } =
     useGlobalUserDetailsContext();
-  const { openModal } = useModalContext();
-
-  const getMultisigVault = (address: string) => {
-    console.log("Address Balance: file DashboardCard", address);
-    return 1;
-  };
-
+  const { principal } = useGlobalIdentityContext();
   const [openFundMultisigModal, setOpenFundMultisigModal] = useState(false);
+  const { get_multisig_balance } = useIcpVault();
+  const [loading, setLoading] = useState(true);
+
   const currentMultisig = multisigAddresses?.find(
     (item) => item.address === activeMultisig,
   );
-  const balance = getMultisigVault(currentMultisig?.address || "");
-  console.log(activeMultisig);
+
+  const generateEthAddress = () => {
+    console.log(encodePrincipalToEthAddress(principal));
+  };
+
+  // useEffect(() => {
+  //   if (activeMultisig) fetchEthBalance(activeMultisig);
+  //   // eslint-disable-next-line react-hooks/exhaustive-deps
+  // }, [activeMultisig]);
+
   const TransactionModal: FC = () => {
     return (
       <>
@@ -162,13 +171,8 @@ const DashboardCard = ({
                   " bg-primary text-white text-sm rounded-lg absolute -bottom-1 left-[16px] px-2"
                 }
               >
-                {activeMultisigData?.threshold
-                  ? activeMultisigData.threshold
-                  : currentMultisig?.threshold}
-                /
-                {activeMultisigData?.signatories?.length
-                  ? activeMultisigData?.signatories?.length
-                  : currentMultisig?.signatories.length}
+                {currentMultisig?.threshold}/
+                {currentMultisig?.signatories.length}
               </div>
             </div>
             <div>
@@ -196,15 +200,43 @@ const DashboardCard = ({
           <div>
             <div className="text-white">Signatories</div>
             <div className="font-bold text-lg text-primary">
-              {activeMultisigData?.signatories?.length
-                ? activeMultisigData?.signatories?.length
-                : currentMultisig?.signatories.length || 0}
+              {currentMultisig?.signatories.length || 0}
             </div>
           </div>
           <div>
             <div className="text-white">ICP</div>
             <div className="font-bold text-lg text-primary">
-              <>{mainBalance?.[activeMultisig] || 0}</>
+              {balanceLoading ? (
+                <Loader />
+              ) : (
+                <span className="text-white">
+                  {currentMultisig?.balance?.ICP || 0.0}
+                </span>
+              )}
+            </div>
+          </div>
+          <div>
+            <div className="text-white">CKBTC</div>
+            <div className="font-bold text-lg text-primary">
+              {balanceLoading ? (
+                <Loader />
+              ) : (
+                <span className="text-white">
+                  {currentMultisig?.balance?.ckBTC || 0.0}
+                </span>
+              )}
+            </div>
+          </div>
+          <div>
+            <div className="text-white">CKETH</div>
+            <div className="font-bold text-lg text-primary">
+              {balanceLoading ? (
+                <Loader />
+              ) : (
+                <span className="text-white">
+                  {currentMultisig?.balance?.ckETH || 0.0}
+                </span>
+              )}
             </div>
           </div>
         </div>

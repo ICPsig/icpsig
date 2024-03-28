@@ -2,26 +2,26 @@
 // This software may be modified and distributed under the terms
 // of the Apache-2.0 license. See the LICENSE file for details.
 
-import { Collapse, Divider } from "antd"
-import classNames from "classnames"
-import dayjs from "dayjs"
-import React, { FC, useEffect, useState } from "react"
-import { useLocation } from "react-router-dom"
-import { useGlobalUserDetailsContext } from "@frontend/context/UserDetailsContext"
-import { firebaseFunctionsHeader } from "@frontend/global/firebaseFunctionsHeader"
-import { FIREBASE_FUNCTIONS_URL } from "@frontend/global/firebaseFunctionsUrl"
-import { chainProperties } from "@frontend/global/networkConstants"
-import { ITransaction } from "@frontend/types"
+import { Collapse, Divider } from "antd";
+import classNames from "classnames";
+import dayjs from "dayjs";
+import React, { FC, useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
+import { useGlobalUserDetailsContext } from "@frontend/context/UserDetailsContext";
+import { firebaseFunctionsHeader } from "@frontend/global/firebaseFunctionsHeader";
+import { FIREBASE_FUNCTIONS_URL } from "@frontend/global/firebaseFunctionsUrl";
+import { chainProperties } from "@frontend/global/networkConstants";
+import { ITransaction } from "@frontend/types";
 import {
   ArrowDownLeftIcon,
   ArrowUpRightIcon,
   CircleArrowDownIcon,
   CircleArrowUpIcon,
-} from "@frontend/ui-components/CustomIcons"
-import { IHistoryTransactions } from "@frontend/utils/convertSafeData/convertSafeHistory"
+} from "@frontend/ui-components/CustomIcons";
+import { IHistoryTransactions } from "@frontend/utils/convertSafeData/convertSafeHistory";
 
-import ReceivedInfo from "./ReceivedInfo"
-import SentInfo from "./SentInfo"
+import ReceivedInfo from "./ReceivedInfo";
+import SentInfo from "./SentInfo";
 
 // const LocalizedFormat = require("dayjs/plugin/localizedFormat")
 // dayjs.extend(LocalizedFormat)
@@ -38,57 +38,57 @@ const Transaction: FC<IHistoryTransactions> = ({
   decodedData,
   data: callData,
 }) => {
-  const { identityBackend } = useGlobalUserDetailsContext()
-  const [transactionInfoVisible, toggleTransactionVisible] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const location = useLocation()
-  const hash = location.hash.slice(1)
-  const isSentType = type === "Sent" || type === "MULTISIG_TRANSACTION"
-  const isFundType = type === "ETHEREUM_TRANSACTION"
+  const [transactionInfoVisible, toggleTransactionVisible] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const location = useLocation();
+  const hash = location.hash.slice(1);
+  const isSentType = type === "Sent" || type === "MULTISIG_TRANSACTION";
+  const isFundType = type === "ETHEREUM_TRANSACTION";
+  const milliseconds = callData?.created_at / 1e6;
 
   const [transactionDetails, setTransactionDetails] = useState<ITransaction>(
     {} as any,
-  )
+  );
 
-  const [totalAmount, setTotalAmount] = useState<number>(0)
+  const [totalAmount, setTotalAmount] = useState<number>(0);
   const handleGetHistoryNote = async () => {
     try {
-      const userAddress = localStorage.getItem("address")
-      const signature = localStorage.getItem("signature")
+      const userAddress = localStorage.getItem("address");
+      const signature = localStorage.getItem("signature");
 
       if (!userAddress || !signature) {
-        console.log("ERROR")
-        return
+        console.log("ERROR");
+        return;
       } else {
-        setLoading(true)
+        setLoading(true);
         const getTransactionDetailsRes = await fetch(
           `${FIREBASE_FUNCTIONS_URL}/getTransactionDetailsEth`,
           {
             body: JSON.stringify({ callHash: txHash }),
             method: "POST",
           },
-        )
+        );
 
         const { data: getTransactionData, error: getTransactionErr } =
           (await getTransactionDetailsRes.json()) as {
-            data: ITransaction
-            error: string
-          }
+            data: ITransaction;
+            error: string;
+          };
 
         if (getTransactionErr) {
-          console.log("error", getTransactionErr)
-          setLoading(false)
-          return
+          console.log("error", getTransactionErr);
+          setLoading(false);
+          return;
         } else {
-          setLoading(false)
-          setTransactionDetails(getTransactionData)
+          setLoading(false);
+          setTransactionDetails(getTransactionData);
         }
       }
     } catch (error) {
-      setLoading(false)
-      console.log("ERROR", error)
+      setLoading(false);
+      console.log("ERROR", error);
     }
-  }
+  };
 
   return (
     <>
@@ -104,9 +104,9 @@ const Transaction: FC<IHistoryTransactions> = ({
             <div
               onClick={() => {
                 if (!transactionInfoVisible) {
-                  handleGetHistoryNote()
+                  handleGetHistoryNote();
                 }
-                toggleTransactionVisible(!transactionInfoVisible)
+                toggleTransactionVisible(!transactionInfoVisible);
               }}
               className={classNames(
                 "grid items-center grid-cols-9 cursor-pointer text-white font-normal text-sm leading-[15px]",
@@ -148,10 +148,7 @@ const Transaction: FC<IHistoryTransactions> = ({
                       },
                     )}
                   >
-                    {isSentType ? "-" : "+"}{" "}
-                    {totalAmount
-                      ? totalAmount.toString()
-                      : amount_token?.toString()}
+                    {isSentType ? "-" : "+"} {callData?.amount}
                   </span>
                 </p>
               ) : (
@@ -159,7 +156,7 @@ const Transaction: FC<IHistoryTransactions> = ({
               )}
               {created_at && (
                 <p className="col-span-2">
-                  {new Date(created_at).toLocaleString()}
+                  {dayjs(milliseconds).format("YYYY-MM-DD HH:mm:ss")}
                 </p>
               )}
               <p className="col-span-2 flex items-center justify-end gap-x-4">
@@ -177,45 +174,31 @@ const Transaction: FC<IHistoryTransactions> = ({
         >
           <div>
             <Divider className="bg-text_secondary my-5" />
-            {isFundType ? (
-              <ReceivedInfo
-                amount={String(amount_token)}
-                amountType={""}
-                date={dayjs(created_at).format("lll")}
-                from={from}
-                callHash={txHash || ""}
-                note={transactionDetails?.note || ""}
-                loading={loading}
-                amount_usd={0}
-                to={to}
-              />
-            ) : (
-              <SentInfo
-                amount={callData.amount}
-                approvals={approvals}
-                amountType={""}
-                date={dayjs(created_at).format("lll")}
-                recipientAddress={callData.to}
-                callHash={txHash || ""}
-                note={transactionDetails?.note || ""}
-                from={executor || ""}
-                loading={loading}
-                amount_usd={0}
-                txType={type}
-                addressAddOrRemove={
-                  type === "addOwnerWithThreshold"
-                    ? decodedData.parameters?.[0]?.value
-                    : type === "removeOwner"
-                    ? decodedData.parameters?.[1]?.value
-                    : ""
-                }
-              />
-            )}
+            <SentInfo
+              amount={callData.amount}
+              approvals={approvals}
+              amountType={""}
+              date={dayjs(milliseconds).format("YYYY-MM-DD HH:mm:ss")}
+              recipientAddress={callData.to}
+              callHash={txHash || ""}
+              note={transactionDetails?.note || ""}
+              from={executor || ""}
+              loading={loading}
+              amount_usd={0}
+              txType={type}
+              addressAddOrRemove={
+                type === "addOwnerWithThreshold"
+                  ? decodedData.parameters?.[0]?.value
+                  : type === "removeOwner"
+                  ? decodedData.parameters?.[1]?.value
+                  : ""
+              }
+            />
           </div>
         </Collapse.Panel>
       </Collapse>
     </>
-  )
-}
+  );
+};
 
-export default Transaction
+export default Transaction;
